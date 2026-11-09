@@ -1,0 +1,97 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "sequoia",
+  "name": "Baza",
+  "description": "The AI-powered personal knowledge management framework built on Obsidian's Dual-Interface Architecture.",
+  "colors": {
+    "primary": "#166E3F",
+    "light": "#26BD6C",
+    "dark": "#166E3F"
+  },
+  "favicon": "/favicon.ico",
+  "icons": {
+    "library": "lucide"
+  },
+  "metadata": {
+    "timestamp": true
+  },
+  "contextual": {
+    "options": ["copy", "view", "assistant", "mcp", "add-mcp"]
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "core-concepts"
+            ]
+          },
+          {
+            "group": "Vault Structure",
+            "pages": [
+              "vault/overview",
+              "vault/inbox",
+              "vault/library",
+              "vault/system-layer"
+            ]
+          },
+          {
+            "group": "AI Agents",
+            "pages": [
+              "agents/overview",
+              "agents/agent-roster",
+              "agents/memory-tiers",
+              "agents/routing"
+            ]
+          },
+          {
+            "group": "Workflows",
+            "pages": [
+              "workflows/session-lifecycle",
+              "workflows/voice-notes",
+              "workflows/inbox-processing",
+              "workflows/content-pipeline"
+            ]
+          },
+          {
+            "group": "Automation & Sync",
+            "pages": [
+              "automation/bzm-cli",
+              "automation/google-drive-sync",
+              "automation/nightly-maintenance",
+              "automation/vector-search"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/tagging-taxonomy",
+              "reference/metadata-schema",
+              "reference/knowledge-graph",
+              "reference/troubleshooting"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Get Started",
+      "href": "/quickstart"
+    }
+  },
+  "footer": {
+    "socials": {}
+  }
+}

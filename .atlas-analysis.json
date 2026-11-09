@@ -1,0 +1,95 @@
+{
+  "projectType": "framework",
+  "projectName": "Baza",
+  "projectDescription": "Baza is an AI-powered personal knowledge management framework built on Obsidian that uses a Dual-Interface Architecture to give both humans and AI agents seamless, structured access to the same Markdown-powered knowledge base.",
+  "theme": "maple",
+  "primaryColor": "#166E3F",
+  "lightColor": "#26BD6C",
+  "darkColor": "#166E3F",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "core-concepts"
+            ]
+          },
+          {
+            "group": "Vault Structure",
+            "pages": [
+              "vault/overview",
+              "vault/inbox",
+              "vault/library",
+              "vault/system-layer"
+            ]
+          },
+          {
+            "group": "AI Agents",
+            "pages": [
+              "agents/overview",
+              "agents/agent-roster",
+              "agents/memory-tiers",
+              "agents/routing"
+            ]
+          },
+          {
+            "group": "Workflows",
+            "pages": [
+              "workflows/session-lifecycle",
+              "workflows/voice-notes",
+              "workflows/inbox-processing",
+              "workflows/content-pipeline"
+            ]
+          },
+          {
+            "group": "Automation & Sync",
+            "pages": [
+              "automation/bzm-cli",
+              "automation/google-drive-sync",
+              "automation/nightly-maintenance",
+              "automation/vector-search"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/tagging-taxonomy",
+              "reference/metadata-schema",
+              "reference/knowledge-graph",
+              "reference/troubleshooting"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Dual-Interface Architecture: same Markdown files serve both human Obsidian UI and machine-readable YAML metadata",
+    "AI Agent Swarm: named agents (Antigravity, Podruga, Archivist, Librarian, Jules) with distinct roles and routing rules",
+    "Memory Tier System: Working → Episodic → Semantic → Procedural memory lifecycle",
+    "bzm.py CLI: command-line tool for vault sync, audit, and Google Drive hot-mirroring",
+    "Voice Notes Pipeline: 2-tap Apple Voice Memos → cloud webhook → formatted Markdown routing",
+    "Nightly Maintenance: automated GitHub Actions for link checking, deduplication, and report generation",
+    "Vector Search: Chroma DB integration with structured metadata schema for semantic retrieval",
+    "Tri-Modal Knowledge Graph: MOC scaffolds + YAML property links + narrative wikilinks",
+    "00-Inbox Drop-Off Office: zero-friction note capture that agents process and file automatically",
+    "Google Drive Hot Mirror: real-time vault mirroring for mobile/Gemini app access"
+  ],
+  "publicApiSurface": [
+    "bzm.py sync — synchronize vault to Google Drive mirror",
+    "bzm.py audit — run vault health check (duplicates, broken links)",
+    "bzm.py start / checkpoint / end — session lifecycle commands",
+    "ArchiveIngestionEngine.ingest_document(doc_id, text_chunk, raw_meta) — Chroma DB ingestion",
+    "ArchiveIngestionEngine.prepare_metadata(raw_meta) — metadata schema validation",
+    "00-Inbox/ — drop-off zone for all new notes",
+    "YAML frontmatter schema: type, status, confidence, last_verified, up, down, related",
+    "Tagging taxonomy: #topic/, #type/, #geo/, #status/ hierarchical hashtags",
+    "Session hotkeys: Ctrl+Alt+S (start), Ctrl+Alt+C (checkpoint), Ctrl+Alt+E (end)",
+    "GitHub Actions: baza_maintenance.yml (nightly sweep), process_nightly_report.yml"
+  ]
+}

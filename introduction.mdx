@@ -1,0 +1,80 @@
+---
+title: "Baza: AI-Powered Personal Knowledge Management System"
+sidebarTitle: "Introduction"
+description: "Baza is a Markdown-powered knowledge operating system that lets AI agents and humans share the same vault, eliminating knowledge silos and agent amnesia."
+---
+
+Baza is a personal knowledge management (PKM) framework that runs inside [Obsidian](https://obsidian.md) and turns your plain Markdown files into a shared workspace for both you and a swarm of AI agents. Instead of juggling disconnected tools—chat windows, note apps, and database exports that never talk to each other—you work inside a single vault where every note is simultaneously human-readable and machine-actionable.
+
+## The Problem Baza Solves
+
+If you have ever started a new AI chat session and watched the model forget everything you discussed last week, you have experienced **agent amnesia**. If you have ever copied the same context into Claude, Gemini, and Copilot because none of them share memory, you have hit a **knowledge silo**. And if your research lives in one app, your tasks in another, and your meeting notes in a third, you are fighting **fragmented tooling** every day.
+
+Baza treats these three problems as a single root cause: AI agents and humans have never had a shared, persistent memory layer. Baza fixes that.
+
+## The Dual-Interface Architecture
+
+The central insight behind Baza is that a plain `.md` file can serve two completely different audiences at the same time without any conflict:
+
+- **The Human Interface** — You see a beautifully formatted note with wikilinks, thematic folders, color-coded graph views, and a live dashboard. Navigation is visual and intuitive.
+- **The Machine Interface** — AI agents read the hidden YAML frontmatter at the top of each file, follow typed relationship links (`[depends_on:: ]`, `[supersedes:: ]`), and execute operations based on structured metadata fields—never touching your folder structure.
+
+Both interfaces share exactly the same files. There is no export step, no sync delay, and no translation layer between what you write and what the agents process.
+
+<Info>
+  Baza follows a **co-equal philosophy**: the system is optimized for neither the human nor the machine exclusively. Each party operates in its area of strength, and the shared Markdown file is the contract between them.
+</Info>
+
+## Memory Tier Architecture
+
+Baza organizes every piece of knowledge across four tiers that mirror how human memory works:
+
+| Tier | Location | What Lives Here |
+|---|---|---|
+| **Working Memory** | `00-Inbox` | Raw, unprocessed notes and voice captures |
+| **Episodic Memory** | Session logs & meeting minutes | Chronological records, compressed from raw inputs |
+| **Semantic Memory** | `02-Library/[Topic]_K` | Verified facts, entity pages, curated concepts |
+| **Procedural Memory** | `99-System` | Agent schemas, rules, workflows, and operating protocols |
+
+As your agents process a note, it graduates upward through these tiers automatically—from a raw dump in the Inbox to a structured, cross-referenced knowledge node in the Library.
+
+## The Vault at a Glance
+
+Your Baza vault has three top-level layers:
+
+- **`00-Inbox`** — The drop-off zone. You throw anything here and walk away. Agents pick it up.
+- **`02-Library/[Topic]_K`** — Curated knowledge, organized into thematic folders (for example, `Consulting_K`, `Fencing_K`). Agents file processed notes here.
+- **`99-System`** — The engine room. Agent prompts, schemas, scripts, and procedural memory. Pushed to the bottom of the file tree so it stays out of your way.
+
+## The Agent Swarm
+
+Baza ships with a roster of specialized AI agents, each owning a distinct domain:
+
+- **Antigravity** — Chief Orchestrator and Protocol Enforcer. Drives task execution and ensures system-wide consistency.
+- **Podruga** — Lead Integrator. Handles system-wide scripts and backend orchestration from the CLI.
+- **The Archivist** — Digital Librarian. Focuses on legacy archive extraction, entity deduplication, and semantic integrity.
+- **The Librarian** — Obsidian Knowledge Guardian. Maintains link health, metadata precision, and the human-readable graph inside Obsidian.
+- **Baby Jules** — Asynchronous Developer. Works in the background on GitHub commits and code tasks.
+
+Every agent reads the same vault, writes back to the same files, and logs its work to the weekly Baza Activity Log so you always know what changed and why.
+
+<Note>
+  Baza uses a **Universal Tether Rule**: every agent operating in the vault must load the master protocol file before taking any action. This prevents context drift and ensures all agents contribute to the same centralized memory rather than building isolated silos.
+</Note>
+
+## Where to Go Next
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Initialize your vault, install the required plugins, and capture your first note in under 10 minutes.
+  </Card>
+  <Card title="Core Concepts" icon="lightbulb" href="/core-concepts">
+    Understand the Dual-Interface Architecture, memory tiers, the knowledge graph, and how agents collaborate.
+  </Card>
+  <Card title="Vault Structure" icon="folder-open" href="/vault/overview">
+    Explore the three-layer folder system and learn the rules for each zone.
+  </Card>
+  <Card title="Agent Swarm" icon="robot" href="/agents/overview">
+    Meet the full agent roster and learn how each agent's domain fits into the larger system.
+  </Card>
+</CardGroup>

@@ -1,0 +1,194 @@
+---
+title: "Inbox Processing: From Raw Notes to Curated Knowledge"
+sidebarTitle: "Inbox Processing"
+description: "Drop any note in the 00-Inbox and Baza's agents will classify it, extract metadata, and file it in the right Library section automatically."
+---
+
+The `00-Inbox` folder is your zero-friction drop-off point for everything that enters Baza. You don't need to decide where a note belongs, what tags to assign it in YAML, or how it connects to existing knowledge — that's what the agents are for. Your job is to capture the raw thought and walk away. Baza's agent swarm picks up inbox notes, extracts structured metadata, builds typed relationships, and files each note into the right thematic Library folder. Every action the agents take is logged in a weekly Baza Activity Log, so you can always see exactly where your notes ended up.
+
+## How to Use the Inbox Effectively
+
+<Steps>
+  <Step title="Drop any raw note into 00-Inbox">
+    Create a new note anywhere in `00-Inbox` and write freely. Don't spend time formatting, linking, or structuring. The inbox is designed to receive raw input exactly as you think it.
+
+    You can drop:
+    - Quick ideas or shower thoughts
+    - Meeting notes taken on the fly
+    - Clippings from articles or documents
+    - Voice transcripts routed from the Voice Notes pipeline
+    - Mobile notes synced from Google Drive or the Obsidian mobile app
+
+    <Tip>
+      You can also create inbox notes from your mobile device. Open Obsidian on iOS or Android, create a note in `00-Inbox`, and it will sync to your vault via Google Drive the next time you run `python bzm.py sync`.
+    </Tip>
+  </Step>
+
+  <Step title="Add optional inline tags for better routing">
+    You don't have to tag your inbox notes — the agents can infer metadata from content alone. But adding a few inline hashtags anywhere in the note body dramatically improves routing accuracy and speeds up processing.
+
+    Use Baza's hierarchical hashtag taxonomy:
+
+    | Dimension | Examples |
+    |---|---|
+    | **Topic / Domain** | `#topic/consulting` · `#topic/fencing` · `#topic/ai` · `#topic/personal_brand` |
+    | **Content Type** | `#type/meeting` · `#type/idea` · `#type/draft` · `#type/resource` · `#type/contact` |
+    | **Geographic** | `#geo/usa/la` · `#geo/europe/paris` · `#geo/global` |
+    | **Status / Urgency** | `#status/urgent` · `#status/active` · `#status/review` · `#status/archived` |
+
+    **Example annotations:**
+
+    ```markdown
+    Met with John today to align on the new website redesign scope.
+    #type/meeting #topic/consulting
+
+    Idea for a parafencing content series targeting LA athletes.
+    #type/idea #topic/fencing #geo/usa/la #status/urgent
+    ```
+
+    <Info>
+      You can place tags anywhere in the body — at the top, inline, or at the bottom. Agents parse the entire note for tags, not just a specific location.
+    </Info>
+  </Step>
+
+  <Step title="Let the agents process your note">
+    Once a note lands in `00-Inbox`, Baza's agent swarm takes over. The Obsidian agent-client plugin can trigger processing on demand, or agents pick up notes automatically during the next scheduled run.
+
+    **What agents do to each inbox note:**
+
+    1. **Extract metadata** — Parse inline tags, identify named entities (people, organizations, projects), and infer the content type from the body text
+    2. **Generate YAML frontmatter** — Promote extracted metadata into structured frontmatter at the top of the note
+    3. **Assign a Tracking ID** — Give the note a unique system ID for cross-referencing
+    4. **Build typed relationships** — Link the note to existing entities using semantic edge types (`[member_of::]`, `[contradicts::]`, `[depends_on::]`)
+    5. **Determine the filing destination** — Select the correct `[Topic]_K` Library folder based on tags and content classification
+    6. **Move the note** — File it from `00-Inbox` into `02-Library/[Topic]_K`
+
+    A note that started as this:
+
+    ```markdown
+    Met with John today to align on the new website redesign scope.
+    #type/meeting #topic/consulting
+    ```
+
+    Becomes this after processing:
+
+    ```yaml
+    ---
+    type: meeting
+    status: active
+    classification: cons
+    confidence: 0.85
+    created: 2026-05-27
+    participants:
+      - John
+    projects:
+      - CONS-PROJ-012
+    tags:
+      - meeting
+      - consulting
+      - website
+    ---
+    ```
+  </Step>
+
+  <Step title="Track what was processed in the Activity Logs">
+    After every processing run, the agents write a summary to the weekly **Baza Activity Log** (e.g., `Baza_Activity_Log_2026_W21.md`). You can find these logs linked from your `BAZA_STATUS_DASHBOARD`.
+
+    Each log entry records:
+    - Which inbox notes were processed
+    - What metadata was extracted and what frontmatter was generated
+    - Which Library folder each note was filed into
+    - What links and relationships were created
+    - Any notes flagged for manual review
+
+    <Tip>
+      Check the Activity Log at the start of each session to review what the agents did while you were away. It takes about 30 seconds to scan and keeps you in the loop without requiring you to inspect every individual note.
+    </Tip>
+  </Step>
+</Steps>
+
+---
+
+## What Agents Do and Don't Touch
+
+Understanding the boundaries of agent processing helps you use the inbox confidently.
+
+<CardGroup cols={2}>
+  <Card title="Agents will process" icon="check">
+    - Raw notes with no frontmatter
+    - Notes with inline hashtags anywhere in the body
+    - Notes imported from mobile or voice pipelines
+    - Clippings and document extracts dropped into the inbox
+  </Card>
+  <Card title="Agents will not touch" icon="x">
+    - Notes in `99-System` (the engine room — edit those manually only)
+    - Notes with `status: active` already in `02-Library`
+    - Files with active Git locks from another session
+    - Notes you've explicitly marked `#status/archived`
+  </Card>
+</CardGroup>
+
+---
+
+## Tagging Reference Card
+
+Use this quick reference when annotating inbox notes. Tags can appear anywhere in the note body — you don't need to put them in frontmatter yourself.
+
+```markdown
+# Tagging Quick Reference
+
+## Topic (what it's about)
+#topic/consulting        #topic/fencing
+#topic/ai                #topic/personal_brand
+
+## Type (what kind of note it is)
+#type/meeting            #type/idea
+#type/draft              #type/resource
+#type/contact
+
+## Geography (where it's relevant)
+#geo/usa/la              #geo/usa/newyork
+#geo/europe/paris        #geo/global
+
+## Status (how urgent or active it is)
+#status/urgent           #status/active
+#status/review           #status/archived
+```
+
+---
+
+## Graph View Colour Coding
+
+Baza uses visual colour coding in the Obsidian Graph View to make it easy to see the processing state of your notes at a glance. Configure these colours in **Settings → Graph View**:
+
+| Colour | Meaning |
+|---|---|
+| 🟡 Yellow | `#type/idea` or `status: draft` — Working Memory, recently processed |
+| 🔵 Blue | `#type/meeting` or `tier: episodic` — Episodic Memory |
+| 🟢 Green | `#topic/fencing` or `type: project` — Actionable Semantic Memory |
+| 🟣 Purple | `#topic/consulting` or `type: organization` — Client Semantic Memory |
+| 🔴 Red | `#status/urgent` or `type: rule/schema` — Core system files |
+| ⚫ Grey | `#status/archived` — Decaying or superseded nodes |
+
+<Info>
+  To declutter the Graph View when your vault grows large, add `-path:"02-Library/Resources"` to the **Filter** field in Graph settings. This hides resource pointer nodes and image references, leaving only your knowledge notes visible.
+</Info>
+
+---
+
+## What to Expect from Agent Processing
+
+<CardGroup cols={2}>
+  <Card title="Response time" icon="clock">
+    Agents process inbox notes during or after a session sync. Notes dropped before you run `python bzm.py sync` are typically processed within the same session. Check the Activity Log to confirm.
+  </Card>
+  <Card title="Confidence scoring" icon="gauge">
+    Every agent-generated fact carries a confidence score from `0.0` to `1.0`. You'll see this in the frontmatter as `confidence: 0.85`. Scores below `0.7` are flagged for your review.
+  </Card>
+  <Card title="Frontmatter ownership" icon="lock">
+    Once a note has been processed and filed, its YAML frontmatter is agent-managed. Don't edit it unless you're correcting a machine error — agents use it to maintain the knowledge graph.
+  </Card>
+  <Card title="Nothing is deleted" icon="shield">
+    Processing never destroys your original content. Agents add structure on top of what you wrote. If a note needs re-classification, the old classification is preserved via a typed supersession link, not overwritten.
+  </Card>
+</CardGroup>

@@ -1,0 +1,189 @@
+---
+title: "Memory Tiers in Baza: From Raw Capture to Reliable Fact"
+sidebarTitle: "Memory Tiers"
+description: "Baza moves knowledge through four tiers — Working, Episodic, Semantic, and Procedural — maturing raw captures into reliable, cross-session facts."
+---
+
+When you drop a raw note into your vault, it doesn't sit there forever in its original form. Baza treats knowledge as something that **matures** — moving through four distinct tiers as it gets processed, verified, and crystallized. This lifecycle is what separates a living knowledge base from a pile of files. Each tier serves a different purpose, is maintained by a different part of the agent swarm, and carries a different level of trust.
+
+## The Four Memory Tiers
+
+<CardGroup cols={2}>
+  <Card title="Tier 1: Working Memory" icon="inbox">
+    Raw, unprocessed, and recent. This is where knowledge enters the system.
+  </Card>
+  <Card title="Tier 2: Episodic Memory" icon="clock">
+    Compressed session logs and chronological records. The recent past.
+  </Card>
+  <Card title="Tier 3: Semantic Memory" icon="database">
+    Verified facts and core entities. Cross-session, consolidated truth.
+  </Card>
+  <Card title="Tier 4: Procedural Memory" icon="workflow">
+    Workflows, schemas, and rules. The system's learned behavior.
+  </Card>
+</CardGroup>
+
+---
+
+## Tier 1: Working Memory
+
+Working memory is your `00-Inbox` — the zero-friction drop-off point at the top of the file tree. Everything that enters Baza starts here. Raw notes from a meeting, a voice memo you transcribed, a dump from Notion, a quick capture from your phone — all of it lands in Working Memory first.
+
+**What lives in Working Memory:**
+- Unprocessed notes dropped into `00-Inbox`
+- Raw exports from external tools (Airtable, Notion, Keep)
+- Legacy archives waiting for extraction
+- Draft observations that haven't been reviewed or linked
+
+**Confidence score:** Low — typically `0.3–0.5`. These are unverified inputs. The system holds them without trusting them.
+
+<Note>
+  Working Memory is intentionally messy. You don't need to clean up your Inbox before dropping something in. The swarm handles the processing — your job is just to capture.
+</Note>
+
+**Who manages this tier:** Primarily The Archivist (Gromozeka) for legacy archives, and the general ingestion pipeline for new captures. Podruga may also handle bulk imports via CLI.
+
+**What happens next:** An agent reads the raw content, extracts key entities and facts, and compresses the useful signal into an Episodic log. The raw note remains in place — nothing gets deleted.
+
+---
+
+## Tier 2: Episodic Memory
+
+Episodic memory is your chronological record — the "what happened and when." It stores compressed session logs, meeting minutes, and processed summaries of raw Working Memory content. Think of it as your vault's short-term, time-stamped history.
+
+**What lives in Episodic Memory:**
+- Weekly Baza Activity Logs written by the agent swarm
+- Session logs from agent operations (what Podruga ran, what The Archivist extracted)
+- Meeting minutes processed from raw notes
+- Compressed summaries of Inbox batches
+
+**Confidence score:** Medium — typically `0.5–0.7`. The content has been processed, but it hasn't yet been cross-referenced against the broader knowledge graph.
+
+**Who manages this tier:** All agents contribute session logs here. The Librarian (Kuzya) monitors Episodic logs for consistency within Obsidian.
+
+<Info>
+  Episodic logs are how agents share context across sessions. When Antigravity starts a new session and needs to know what was done last week, it reads the Episodic logs — not the raw Inbox. This is the mechanism that defeats Agent Amnesia.
+</Info>
+
+**What happens next:** Over time, facts that appear consistently across multiple Episodic logs — names, project statuses, decisions — get promoted to Semantic Memory as verified entities.
+
+---
+
+## Tier 3: Semantic Memory
+
+Semantic memory is where Baza stores what it actually **knows** — verified facts that have survived multiple sessions and cross-referencing. This is the core of your knowledge graph: structured entity pages for People, Projects, Concepts, and Organizations, connected by typed relationships.
+
+**What lives in Semantic Memory:**
+- Person pages (`type: person`, `status: active`) with verified attributes
+- Project pages with current status, dependencies, and linked decisions
+- Concept pages that define key terms in your domain
+- Cross-referenced facts with typed relationships (`[depends_on:: [[Project]]]`, `[member_of:: [[Organization]]]`)
+
+**Confidence score:** High — typically `0.7–0.95`. Facts at this tier have been verified through multiple sources or reinforced across sessions.
+
+**Example — a person entity promoted from Episodic to Semantic:**
+
+```yaml
+---
+type: person
+name: "Aleksandra Ivanova"
+status: active
+role: "Lead Designer"
+confidence: 0.88
+last_verified: 2026-05-20
+member_of:
+  - "[[Project_Atlas]]"
+supersedes: "[[Aleksandra_Ivanova_draft]]"
+---
+```
+
+**Who manages this tier:** The Librarian (Kuzya) maintains Semantic Memory within Obsidian, enforcing canonical link health and metadata precision. The Archivist promotes entities from raw archives into this tier during extraction operations.
+
+<Tip>
+  You can also promote knowledge manually — if you know something is definitively true, you can update the confidence score directly in the frontmatter and mark it as verified. Agents will respect your overrides.
+</Tip>
+
+---
+
+## Tier 4: Procedural Memory
+
+Procedural memory is the system's learned behavior — the workflows, schemas, patterns, and rules that have been extracted from Semantic Memory over time. This tier tells agents **how to do things**, not just what things exist.
+
+**What lives in Procedural Memory:**
+- The vault schema (`SCHEMA.md`) defining entity types and relationship rules
+- Workflow templates for recurring operations (ingestion, extraction, review)
+- Agent operating manuals and protocol files (`GLOBAL_RULES.md`)
+- Naming conventions, tagging taxonomies, and structural patterns
+
+**Confidence score:** Very high — typically `0.9–1.0`. Procedural memory represents crystallized, stable knowledge that agents follow as rules.
+
+**Who manages this tier:** Antigravity (Raketa) enforces procedural rules during orchestration and architecture reviews. The Librarian applies them within Obsidian. Updates to Procedural Memory require deliberate review — this is not a tier that changes frequently.
+
+<Warning>
+  Be careful about editing Procedural Memory files (like `SCHEMA.md` or `GLOBAL_RULES.md`) without reviewing the downstream effects. Other agents depend on these files to know how to behave. Changes here ripple through the entire swarm.
+</Warning>
+
+---
+
+## Confidence Scoring
+
+Every node in Baza carries a confidence score from `0.0` to `1.0`. This score tells agents (and you) how much to trust a given piece of information.
+
+| Score Range | Meaning | Typical Tier |
+|---|---|---|
+| `0.0 – 0.3` | Unverified, speculative, or very raw | Working Memory |
+| `0.3 – 0.5` | Captured but unprocessed | Working / Episodic |
+| `0.5 – 0.7` | Processed, not yet cross-referenced | Episodic |
+| `0.7 – 0.9` | Verified, cross-referenced | Semantic |
+| `0.9 – 1.0` | Crystallized, stable rule or fact | Semantic / Procedural |
+
+Confidence scores **decay over time** if a fact isn't reinforced — a person's role noted a year ago and never updated will drift toward lower confidence as time passes. They **strengthen with reinforcement** — when the same fact appears across multiple independent sources, the score rises.
+
+---
+
+## The Supersession Mechanism
+
+Baza never silently deletes information when something changes. Instead, new data **supersedes** old data through a typed relationship link.
+
+When a conflicting fact arrives — say, a project status that contradicts an earlier record — the system:
+
+1. Creates or updates the new node with the current fact
+2. Sets its confidence score based on source quality
+3. Links it to the old node via `[supersedes:: [[Old_Node]]]`
+4. Drops the old node's confidence score to reflect that it's been superseded
+5. Timestamps both operations
+
+```yaml
+---
+type: project
+name: "Project Atlas"
+status: "paused"
+confidence: 0.82
+last_updated: 2026-05-18
+supersedes: "[[Project_Atlas_2026_04]]"
+---
+```
+
+The old node isn't gone — it's still there, still readable, still part of the historical record. It's just clearly marked as having been superseded by more current information.
+
+<Info>
+  This mechanism is what makes Baza trustworthy over time. You can always trace why a fact changed, when it changed, and what it replaced. The knowledge graph has memory of its own evolution.
+</Info>
+
+---
+
+## How Knowledge Moves Between Tiers
+
+The promotion pipeline runs on a combination of agent activity and event-driven automation hooks.
+
+```
+00-Inbox (raw capture)
+    ↓  [Agent reads, extracts entities, compresses]
+Episodic Log (session summary, timestamped)
+    ↓  [Agent cross-references, verifies across sessions]
+Semantic Entity (typed node, confidence-scored)
+    ↓  [Agent extracts stable patterns, formalizes rules]
+Procedural Rule (schema, workflow, protocol)
+```
+
+Each promotion step is logged, attributed to the agent that performed it, and reversible if the promotion turns out to be premature. Nothing in this pipeline is irreversible — the raw source always remains.

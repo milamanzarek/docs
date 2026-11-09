@@ -1,0 +1,148 @@
+---
+title: "Baza System Layer: The Automated Agent Engine Room"
+sidebarTitle: "System Layer"
+description: "The 99-System folder houses agent configuration, automation scripts, protocols, and logs that power Baza's automated knowledge management."
+---
+
+The `99-System/` folder is the operational backbone of your vault. It contains every piece of configuration, scripting, and procedural memory the agent swarm needs to process your notes, maintain the knowledge graph, and keep your vault healthy. By design, this folder sits at the very bottom of the file tree — visible when you need it, invisible when you do not.
+
+## What Lives in 99-System
+
+The System Layer is organized into purposeful subdirectories. Here is what each one contains and why it exists:
+
+```
+99-System/
+├── Agents/           ← Agent system prompts, schemas, routing config
+├── Scripts/          ← Python automation scripts and maintenance tools
+├── Protocols/        ← Step-by-step operational procedures
+├── SOPs/             ← Standard Operating Procedures for recurring tasks
+├── Frameworks/       ← Conceptual models agents use for decision-making
+├── Logs/             ← Weekly Baza Activity Logs and task records
+├── Nightly_Reports/  ← Output from nightly maintenance script runs
+└── Nightly_Report.md ← Latest consolidated maintenance report
+```
+
+### Agents/
+
+This is where the swarm lives. The `Agents/` folder holds:
+
+- **`SCHEMA.md`** — The master definition of all entity types, relationship types, confidence scoring rules, and memory tier conventions. Think of it as the agent swarm's constitution.
+- **`AGENTS.md`** — The team roster and role definitions for each active agent (e.g., Podruga the Integrator, Archivist the Forensic Extraction Specialist, Jules for Personal Growth).
+- **`_AGENT_ROUTING_INDEX.yaml`** — The routing rules that tell agents which content type maps to which Library folder.
+- **`_TEAM_ROSTER.json`** — Machine-readable agent configuration consumed by automation scripts.
+- **Agent prompt files** — Individual `.md` files for specialized agents (e.g., `Baza Status Dashboard Updater.md`, `Bulk Personal Ingest Pipeline.md`, `Brain Dump to Bases Converter.md`).
+
+### Scripts/
+
+The `Scripts/` folder contains the Python programs that automate vault maintenance. Key scripts include:
+
+| Script | What it does |
+|---|---|
+| `bzm.py` | Master control script — runs sync, maintenance, and session lifecycle commands |
+| `link_check.py` | Scans the vault for broken wikilinks and reports orphaned nodes |
+| `dedupe_check.py` | Identifies duplicate or near-duplicate notes across Library folders |
+| `generate_report.py` | Compiles the nightly health report and writes it to `Nightly_Reports/` |
+| `baza_inbox_watcher.py` | Monitors `00-Inbox/` for new files and triggers the agent pipeline |
+| `evict_heavy_files.py` | Finds oversized assets in the vault and routes them to external storage |
+| `analyze_orphans.py` | Lists notes with no inbound or outbound links for review |
+
+### Protocols/
+
+Protocols are step-by-step operational procedures for specific integrations and data flows. Current protocols include:
+
+- `CHROMA-DB-12-YEAR-ARCHIVE-INGESTION-SCHEMA` — How to ingest large historical archives into ChromaDB
+- `CLOUDINARY-URL-CONSTRUCTION-PROTOCOL` — How agents build and validate Cloudinary asset URLs
+- `GOOGLE-DRIVE-1-WAY-SYNC-PROTOCOL` — The specification for the hot mirror sync to Google Drive
+- `METADATA-MENU-CONFIGURATION-PROTOCOL` — How the Metadata Menu Obsidian plugin is configured
+
+### Logs/
+
+Every action the agent swarm takes is documented here. The `Logs/` folder contains weekly **Baza Activity Logs** — your transparent record of what was moved, linked, extracted, and created.
+
+```
+Logs/
+├── BAZA-ACTIVITY-LOG-2026-W19.md
+├── BAZA-ACTIVITY-LOG-2026-W20.md
+├── BAZA-ACTIVITY-LOG-2026-W21.md  ← Current week
+├── BAZA-ACTIVITY-LOG-2026-W22.md
+└── ARCHIVIST-TASK-LOG.md
+```
+
+You can read these logs directly from your `Welcome.md` dashboard — they are linked in the Activity Log Summary section so you never have to navigate here manually during normal use.
+
+### Nightly_Reports/
+
+After each nightly maintenance run, `generate_report.py` writes its output here. These reports show vault health metrics: broken link counts, duplicate candidates, orphaned nodes, and any anomalies flagged by the maintenance scripts.
+
+## When to Open 99-System
+
+You should open the System Layer in these specific situations:
+
+<CardGroup cols={2}>
+  <Card title="Modifying Agent Behavior" icon="sliders">
+    Edit agent prompt files in `Agents/` when you want to change how an agent classifies notes, extracts entities, or chooses Library destinations.
+  </Card>
+  <Card title="Reading Activity Logs" icon="scroll">
+    Browse `Logs/` to see exactly what the swarm processed this week — though your dashboard links these directly, so you rarely need to navigate here.
+  </Card>
+  <Card title="Running Manual Scripts" icon="terminal">
+    Execute scripts from `Scripts/` when you need an on-demand sync, a manual orphan analysis, or a bulk ingestion run outside a normal session.
+  </Card>
+  <Card title="Reviewing Nightly Reports" icon="chart-bar">
+    Check `Nightly_Reports/` or `Nightly_Report.md` when the dashboard shows a vault health warning and you want the underlying detail.
+  </Card>
+</CardGroup>
+
+## What Not to Touch
+
+<Warning>
+  Do not edit `SCHEMA.md`, `_AGENT_ROUTING_INDEX.yaml`, or `_TEAM_ROSTER.json` unless you fully understand the downstream effects. These files define how agents interpret every note in your vault. An incorrect change can silently misfile notes or break graph relationships across thousands of nodes.
+</Warning>
+
+<Warning>
+  Do not manually edit YAML frontmatter that agents have already written into processed notes. Agent-authored metadata is the source of truth for the knowledge graph. Manual edits will be overwritten or will create conflicting relationship states.
+</Warning>
+
+## How Nightly Maintenance Works
+
+Every night, a scheduled maintenance pipeline runs automatically via GitHub Actions and keeps your vault in shape without any input from you. Here is what it does:
+
+```
+Nightly Pipeline
+─────────────────────────────────────────────────
+1. link_check.py       Finds and reports broken wikilinks
+2. dedupe_check.py     Flags near-duplicate notes for review
+3. generate_report.py  Writes the health summary to Nightly_Reports/
+─────────────────────────────────────────────────
+Output: Nightly_Report.md (visible on your dashboard)
+```
+
+You can also trigger the full maintenance suite manually at any time:
+
+```powershell
+python 99-System/Scripts/bzm.py sync
+```
+
+Or run individual scripts directly for targeted analysis:
+
+```powershell
+# Check for broken links
+python 99-System/Scripts/link_check.py
+
+# Find duplicate notes
+python 99-System/Scripts/dedupe_check.py
+
+# List orphaned nodes (no inbound or outbound links)
+python 99-System/Scripts/analyze_orphans.py
+
+# Generate a fresh health report
+python 99-System/Scripts/generate_report.py
+```
+
+<Note>
+  The Google Drive mirror sync (`bzm.py sync`) is excluded from the nightly pipeline by default and must be triggered manually or at session end via the `:checkpoint` and `:end` session lifecycle macros. The exclusion list covers `.git`, `.github`, `.venv`, `.obsidian`, `.smart-env`, and `98-Cold-Archive` to keep the mirror clean.
+</Note>
+
+<Tip>
+  If you want to modify how a specific agent behaves — for example, changing which Library folder receives `#type/contact` notes — open the relevant agent prompt file in `Agents/` and update the routing rules there. Then update `_AGENT_ROUTING_INDEX.yaml` to match. Changes take effect on the next agent session.
+</Tip>

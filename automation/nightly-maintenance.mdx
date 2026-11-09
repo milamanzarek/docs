@@ -1,0 +1,250 @@
+---
+title: "Nightly Maintenance: Automated Vault Health Checks"
+sidebarTitle: "Nightly Maintenance"
+description: "Baza runs GitHub Actions every night to check broken links, find duplicate notes, and update your vault's morning health report automatically."
+---
+
+Every night at 2:00 AM UTC, Baza's GitHub Actions workflow runs a full vault health sweep called the **Engine Room Maintenance Sweep**. While you sleep, four scripts scan your vault for broken wikilinks and duplicate notes, compile a structured nightly report, and update the morning postcard on your `Welcome.md` dashboard with a fresh health summary. By the time you open Obsidian in the morning, your vault has already diagnosed itself.
+
+## How It's Triggered
+
+The workflow runs on a fixed schedule using a cron expression and can also be triggered manually from the GitHub Actions UI at any time.
+
+```yaml
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 2:00 AM UTC every day
+  workflow_dispatch:       # Manual trigger from GitHub UI
+```
+
+<Info>
+The workflow runs in a `ubuntu-latest` GitHub Actions environment. It checks out your vault repository, sets up Python, runs the four maintenance scripts in sequence, and then commits and pushes the updated output files back to your repository automatically.
+</Info>
+
+---
+
+## Maintenance Steps
+
+The sweep runs four scripts in order. Each step's output feeds into the next.
+
+<Steps>
+
+<Step title="Link Check — Scan for broken wikilinks">
+`link_check.py` walks every `.md` file in the vault and checks each `[[wikilink]]` against the full file index. Any link that points to a note that doesn't exist is written to `broken_links.txt` at the repository root.
+
+```yaml
+- name: Run Markdown Link Checker
+  id: link_checker
+  run: |
+    python 99-System/Scripts/link_check.py
+    if [ -f broken_links.txt ]; then
+      count=$(wc -l < broken_links.txt)
+      echo "broken_count=$count" >> $GITHUB_OUTPUT
+    else
+      echo "broken_count=0" >> $GITHUB_OUTPUT
+    fi
+```
+
+The step exports `broken_count` — the number of broken links found — as a GitHub Actions output variable. This number is passed to the postcard update step later in the workflow.
+
+**Output file:** `broken_links.txt` (repository root)
+</Step>
+
+<Step title="Deduplication Check — Find duplicate notes">
+`dedupe_check.py` scans your vault for notes with identical content and writes matches to `duplicates.txt`. The workflow counts occurrences of the phrase `"Identical content"` in the output file to get the total number of duplicate pairs found.
+
+```yaml
+- name: Run Deduplication Script
+  id: dedupe_checker
+  run: |
+    python 99-System/Scripts/dedupe_check.py
+    if [ -f duplicates.txt ]; then
+      count=$(grep -c "Identical content" duplicates.txt || echo 0)
+      echo "dup_count=$count" >> $GITHUB_OUTPUT
+    else
+      echo "dup_count=0" >> $GITHUB_OUTPUT
+    fi
+```
+
+Like the link checker, this step exports `dup_count` as an output variable for downstream use.
+
+**Output file:** `duplicates.txt` (repository root)
+</Step>
+
+<Step title="Generate Nightly Report — Compile the full health summary">
+`generate_report.py` reads the outputs from the previous two steps and compiles them into a structured Markdown health report.
+
+```yaml
+- name: Generate Nightly Report
+  run: |
+    python 99-System/Scripts/generate_report.py
+```
+
+**Output file:** `99-System/Nightly_Report.md`
+
+Open this file in Obsidian to see the full breakdown: which specific links are broken, which notes are duplicated, and any other health metrics the report surfaces. This is the canonical audit record for the night.
+</Step>
+
+<Step title="Update Morning Postcard — Refresh Welcome.md">
+`update_postcard.py` receives the `broken_count` and `dup_count` from earlier steps and injects a health summary block into `Welcome.md`. This is the morning postcard — the first thing you see when you open Obsidian.
+
+```yaml
+- name: Update Morning Postcard
+  run: |
+    # Pass empty string for the third argument (issue URL — no longer used)
+    python 99-System/Scripts/update_postcard.py ${{ steps.link_checker.outputs.broken_count }} ${{ steps.dedupe_checker.outputs.dup_count }} ""
+```
+
+The postcard gives you an at-a-glance view of your vault's health without having to open the full nightly report.
+</Step>
+
+<Step title="Commit and Push — Save results back to the repository">
+After all scripts complete, the workflow uses `git-auto-commit-action` to commit and push the two updated files back to your repository.
+
+```yaml
+- name: Commit and Push Updates
+  uses: stefanzweifel/git-auto-commit-action@v5
+  with:
+    commit_message: "chore(maintenance): update morning postcard and nightly report"
+    file_pattern: "Welcome.md 99-System/Nightly_Report.md"
+```
+
+The commit message follows the conventional commits format so maintenance commits are easy to filter out of your Git log.
+</Step>
+
+</Steps>
+
+---
+
+## Reading the Morning Postcard
+
+When you open Obsidian in the morning, `Welcome.md` shows you the vault health summary from the previous night's sweep. The postcard gives you three numbers at a glance:
+
+<CardGroup cols={3}>
+  <Card title="Broken Links" icon="link-slash">
+    The number of `[[wikilinks]]` that point to notes that don't exist. A non-zero count means some notes are orphaned or were renamed without updating their references.
+  </Card>
+  <Card title="Duplicate Notes" icon="copy">
+    The number of duplicate content pairs found. Open `duplicates.txt` to see exactly which notes are affected and decide which copy to keep.
+  </Card>
+  <Card title="Full Report" icon="file-lines">
+    A link to `99-System/Nightly_Report.md` where you can review the complete audit output with file paths and details.
+  </Card>
+</CardGroup>
+
+<Tip>
+If the postcard shows zero broken links and zero duplicates, your vault is clean — no action needed. If you see non-zero counts, start with `99-System/Nightly_Report.md` for the full list before making any changes.
+</Tip>
+
+---
+
+## Output Files Reference
+
+| File | Location | Contents |
+|---|---|---|
+| `broken_links.txt` | Repository root | One broken wikilink per line, with source file and target |
+| `duplicates.txt` | Repository root | Duplicate note pairs with `Identical content` markers |
+| `Nightly_Report.md` | `99-System/Nightly_Report.md` | Full structured health report with all findings |
+| `Welcome.md` | Repository root | Morning postcard — updated with last night's health stats |
+
+---
+
+## Triggering Maintenance Manually
+
+You don't have to wait until 2:00 AM to run the maintenance sweep. Trigger it on demand directly from GitHub:
+
+<Steps>
+
+<Step title="Open your repository on GitHub">
+Navigate to your Baza repository on GitHub.
+</Step>
+
+<Step title="Go to the Actions tab">
+Click the **Actions** tab at the top of the repository page.
+</Step>
+
+<Step title="Select the workflow">
+Find **Engine Room Maintenance Sweep** in the left sidebar and click it.
+</Step>
+
+<Step title="Run the workflow">
+Click **Run workflow** in the top-right corner of the workflow runs list. Leave the branch set to `main` and click the green **Run workflow** button.
+</Step>
+
+<Step title="Monitor the run">
+The workflow run appears at the top of the list within a few seconds. Click it to watch the steps execute in real time. When all steps show green checkmarks, your updated `Welcome.md` and `Nightly_Report.md` are already committed to the repository.
+</Step>
+
+</Steps>
+
+<Note>
+After a manual run completes, pull the latest changes to your local vault with `git pull` to see the updated report and postcard files in Obsidian.
+</Note>
+
+---
+
+## Full Workflow File
+
+Here is the complete `baza_maintenance.yml` for reference:
+
+```yaml
+name: Engine Room Maintenance Sweep
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run Markdown Link Checker
+        id: link_checker
+        run: |
+          python 99-System/Scripts/link_check.py
+          if [ -f broken_links.txt ]; then
+            count=$(wc -l < broken_links.txt)
+            echo "broken_count=$count" >> $GITHUB_OUTPUT
+          else
+            echo "broken_count=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Deduplication Script
+        id: dedupe_checker
+        run: |
+          python 99-System/Scripts/dedupe_check.py
+          if [ -f duplicates.txt ]; then
+            count=$(grep -c "Identical content" duplicates.txt || echo 0)
+            echo "dup_count=$count" >> $GITHUB_OUTPUT
+          else
+            echo "dup_count=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Nightly Report
+        run: |
+          python 99-System/Scripts/generate_report.py
+
+      - name: Update Morning Postcard
+        run: |
+          # Pass empty string for the third argument (issue URL — no longer used)
+          python 99-System/Scripts/update_postcard.py ${{ steps.link_checker.outputs.broken_count }} ${{ steps.dedupe_checker.outputs.dup_count }} ""
+
+      - name: Commit and Push Updates
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(maintenance): update morning postcard and nightly report"
+          file_pattern: "Welcome.md 99-System/Nightly_Report.md"
+```

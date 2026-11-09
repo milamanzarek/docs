@@ -1,0 +1,237 @@
+---
+title: "Knowledge Graph: Typed Relationships and Graph Structure"
+sidebarTitle: "Knowledge Graph"
+description: "Baza's knowledge graph uses three linking modes and typed relationship syntax to build a searchable, agent-navigable map of your knowledge."
+---
+
+The Baza knowledge graph is the connective tissue of your vault. Rather than a flat collection of notes, your vault is a living network of typed entities — people, projects, concepts, events — linked by relationships that carry semantic meaning. Agents navigate this graph to answer questions, surface stale knowledge, detect contradictions, and route new information to the right place. This page explains how the graph is built, how to read it, and how to query it.
+
+## Three Linking Modes
+
+Baza uses three distinct linking modes, each serving a different audience and purpose. You can and should use all three — they are complementary, not competing.
+
+<CardGroup cols={3}>
+  <Card title="MOC Links" icon="map">
+    **Map of Content** scaffold links. Structural navigation pages that act as hubs for a topic, listing related notes as wikilinks. Written for humans. Example: a `Consulting_MOC.md` page that links to all client nodes and project briefs.
+  </Card>
+  <Card title="YAML Property Links" icon="code">
+    **Machine-readable typed relationships** declared in YAML frontmatter or the Machine Zone footer. Written for agents and Dataview queries. Example: `[depends_on:: [[Client_Brief]]]`.
+  </Card>
+  <Card title="Narrative Wikilinks" icon="pen-to-square">
+    **Inline prose connections** — standard `[[Note Name]]` links embedded in the body text of a note. Written for humans reading the note. Example: "This project builds on the framework described in [[LLM_Wiki_Architecture]]."
+  </Card>
+</CardGroup>
+
+<Info>
+  Agents primarily navigate the graph using **YAML property links** because they carry semantic type information. Narrative wikilinks are indexed by Obsidian for graph visualization but do not convey relationship type. MOC links provide the human-navigable structure that sits on top of both.
+</Info>
+
+---
+
+## Typed Relationship Syntax
+
+Typed relationships use Dataview's inline field syntax — a bracket-wrapped key-value pair placed in the **Machine Zone** footer of a note. Agents create and maintain these fields; you read them to understand how a node is connected to the rest of the graph.
+
+The general syntax is:
+
+```
+[relationship_type:: [[Target_Node]]]
+```
+
+### Full Relationship Reference
+
+<ParamField path="depends_on" type="wikilink">
+  This node requires the target node to function or be meaningful. Use for projects that depend on a person, concepts that build on a framework, or tasks blocked by another task.
+
+  ```
+  [depends_on:: [[Client_Brief]]]
+  ```
+</ParamField>
+
+<ParamField path="supersedes" type="wikilink">
+  This node replaces the target node. When an agent writes this relationship, it also lowers the target's `confidence` to below `0.2` and sets its `status` to `archived`. Old data is never deleted — it is preserved as a grey, low-confidence node.
+
+  ```
+  [supersedes:: [[Website_Brief_v1]]]
+  ```
+</ParamField>
+
+<ParamField path="member_of" type="wikilink">
+  This node belongs to the target group, organization, or project. The inverse is implied — the target node gains a virtual "has member" edge in Dataview queries.
+
+  ```
+  [member_of:: [[USA_Fencing]]]
+  ```
+</ParamField>
+
+<ParamField path="contradicts" type="wikilink">
+  This node contains information that conflicts with the target node. Both nodes are preserved. Agents flag the lower-confidence node for review but do not automatically resolve the contradiction — human judgment is required.
+
+  ```
+  [contradicts:: [[Earlier_Market_Analysis]]]
+  ```
+</ParamField>
+
+<ParamField path="related" type="wikilink">
+  A general semantic relationship — this node is meaningfully connected to the target, but the relationship doesn't fit a more specific type. Use sparingly; prefer a specific relationship type when one applies.
+
+  ```
+  [related:: [[Personal_Brand_Strategy]]]
+  ```
+</ParamField>
+
+<ParamField path="up" type="wikilink">
+  Hierarchy: this node is a child of the target node. Use for concepts nested under a broader topic, or tasks within a project.
+
+  ```
+  [up:: [[Consulting_Projects]]]
+  ```
+</ParamField>
+
+<ParamField path="down" type="wikilink">
+  Hierarchy: this node is a parent of the target node. The inverse of `up::`. Use on parent nodes to enumerate their children.
+
+  ```
+  [down:: [[Website_Redesign_Sprint_1]]]
+  ```
+</ParamField>
+
+---
+
+## Machine Zone Placement
+
+All typed relationship fields live in the **Machine Zone** — a clearly delimited footer section at the bottom of every semantic note. This separation keeps human-readable prose clean while giving agents a predictable location to read and write graph edges.
+
+```markdown
+## 🤖 Machine Zone Metadata
+*Do not edit below this line.*
+
+[member_of:: [[Consulting_Projects]]]
+[depends_on:: [[Client_Brief_v2]]]
+[supersedes:: [[Website_Brief_v1]]]
+[related:: [[Personal_Brand_Strategy]]]
+```
+
+<Warning>
+  Agents treat the Machine Zone as their exclusive workspace. If you edit typed relationships manually, do so carefully — removing a `[supersedes::]` link without also restoring the old node's confidence score will orphan the archived node in an inconsistent state.
+</Warning>
+
+---
+
+## Confidence Scoring
+
+Every node in the graph carries a `confidence` score from `0.0` to `1.0` in its YAML frontmatter. This score is the primary signal agents use to decide whether to trust, propagate, or supersede information.
+
+### How Confidence Changes Over Time
+
+Confidence is **dynamic** — it starts at an initial value assigned during ingestion and changes as the vault evolves:
+
+- **Reinforcement:** When a new source confirms information already in a node, the agent raises the node's confidence score toward `1.0`.
+- **Decay:** Without reinforcement, confidence decays gradually over time. Nodes with a `last_verified` date far in the past will be flagged for review.
+- **Contradiction:** When new information contradicts an existing claim, agents write a `[contradicts::]` link and flag both nodes. The agent does not automatically resolve the contradiction — human review is required.
+- **Supersession:** When a node is superseded, its confidence drops below `0.2` automatically and its status is set to `archived`.
+
+### Confidence Scale
+
+| Score | Label | Agent Behavior |
+|---|---|---|
+| `1.0` | Canonical | Never overwritten automatically. Treated as ground truth. |
+| `0.8 – 0.9` | High | Trusted for reasoning and propagation. |
+| `0.5 – 0.7` | Working assumption | Used but flagged for verification during lint passes. |
+| `< 0.5` | Uncertain | Not used for downstream reasoning without human review. |
+| `< 0.2` | Superseded / Dead | Preserved for audit trail only. Excluded from active queries. |
+
+---
+
+## Supersession Mechanics
+
+Supersession is how Baza updates its knowledge without losing history. When new information replaces old information, agents execute a four-step process:
+
+1. **Create** the new node with updated content and a high confidence score.
+2. **Write** `[supersedes:: [[Old_Node]]]` in the new node's Machine Zone.
+3. **Update** the old node: lower `confidence` to `< 0.2`, set `status: archived`, and add `[superseded_by:: [[New_Node]]]`.
+4. **Log** the supersession event in the current week's Baza Activity Log.
+
+The old node turns grey in the Graph View and disappears from active Dataview queries — but it is never deleted. You can always navigate to it to see what the vault believed before the update.
+
+```yaml
+# New node (Website_Brief_v2.md)
+---
+type: doc
+status: active
+confidence: 0.95
+last_verified: 2026-05-20
+---
+
+[supersedes:: [[Website_Brief_v1]]]
+```
+
+```yaml
+# Old node (Website_Brief_v1.md) — updated by agent
+---
+type: doc
+status: archived
+confidence: 0.1
+last_verified: 2026-05-20
+---
+
+[superseded_by:: [[Website_Brief_v2]]]
+```
+
+---
+
+## Querying the Graph with Dataview
+
+Use Dataview queries in any note to pull structured views of graph data. Dataview reads the typed relationship fields from the Machine Zone and the YAML frontmatter fields simultaneously.
+
+### List all active projects
+
+```dataview
+TABLE confidence, last_verified
+FROM "02-Library"
+WHERE type = "project" AND status = "active"
+SORT confidence DESC
+```
+
+### Find nodes that supersede an old document
+
+```dataview
+LIST
+FROM "02-Library"
+WHERE supersedes = [[Website_Brief_v1]]
+```
+
+### Show all members of an organization
+
+```dataview
+LIST
+FROM "02-Library"
+WHERE member_of = [[USA_Fencing]]
+```
+
+### Find stale nodes that need review
+
+```dataview
+TABLE confidence, last_verified
+FROM "02-Library"
+WHERE confidence < 0.5 AND status = "active"
+SORT last_verified ASC
+```
+
+<Tip>
+  Add the filter `-path:"02-Library/Resources"` to any Dataview query or to your Graph View filter field to exclude resource pointer nodes. With 14,000+ entities in the vault, hiding resource pointers dramatically speeds up both queries and graph rendering.
+</Tip>
+
+---
+
+## Graph Health and Lint Operations
+
+The agent swarm runs periodic lint passes to keep the graph healthy. During a lint pass, agents look for:
+
+- **Orphan nodes** — nodes with no incoming or outgoing typed relationships.
+- **Broken wikilinks** — `[[Node Name]]` references that don't resolve to an existing file.
+- **Decaying confidence** — nodes whose `last_verified` date indicates the data may be stale.
+- **Unresolved contradictions** — pairs of nodes linked by `[contradicts::]` that have not been reviewed.
+- **Half-baked Working Memory** — `SUMMARY_*.md` files in `00-Inbox/` that are missing their `## Web Search` section and should not be promoted yet.
+
+Lint results are written to the current week's Baza Activity Log and surfaced on the Welcome Dashboard under System Health.

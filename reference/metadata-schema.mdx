@@ -1,0 +1,194 @@
+---
+title: "Metadata Schema: YAML Frontmatter Fields and Entity Types"
+sidebarTitle: "Metadata Schema"
+description: "Every Baza node uses structured YAML frontmatter to give agents machine-readable context — here are all supported fields and entity types."
+---
+
+Every file in Baza's Semantic and Procedural Memory layers carries a block of YAML frontmatter at the top. You don't need to write this yourself — agents generate and maintain it automatically during ingestion. But understanding the schema helps you verify that your notes were processed correctly, correct machine errors when they occur, and design templates for notes you want to create intentionally.
+
+## What Frontmatter Does
+
+YAML frontmatter is the **machine-readable half** of Baza's Dual-Interface Architecture. While the prose body of a note is written for you to read, the frontmatter is written for agents and Dataview queries to read. It tells the swarm what kind of entity a node represents, how confident the system is in its contents, when it was last verified, and how it relates to other nodes in the graph.
+
+A minimal Baza node looks like this:
+
+```yaml
+---
+type: concept
+status: active
+confidence: 0.85
+last_verified: 2026-05-12
+aliases: ["LLM Wiki", "Agent Memory"]
+created_by: gemini-scribe
+---
+```
+
+---
+
+## Core Frontmatter Fields
+
+These fields appear on every node in Semantic and Procedural Memory, regardless of entity type.
+
+<ParamField path="type" type="string" required>
+  The entity type of this node. Controls how agents process, file, and link the note. Must match one of the defined entity types — see the full list below. Example: `type: person`
+</ParamField>
+
+<ParamField path="status" type="string" required>
+  The lifecycle status of this node. Agents update this automatically during supersession and archival. Allowed values:
+  - `active` — currently in use and up to date
+  - `archived` — superseded or no longer relevant; confidence should be below 0.2
+  - `draft` — created but not yet reviewed or validated
+</ParamField>
+
+<ParamField path="confidence" type="float" required>
+  A score from `0.0` to `1.0` expressing how reliable the information in this node is. Agents assign this at ingestion and update it over time. See the confidence scoring guide below for the full scale. Example: `confidence: 0.9`
+</ParamField>
+
+<ParamField path="last_verified" type="string (ISO date)" required>
+  The date the information in this node was last confirmed accurate. Agents use this to detect stale data. Format: `YYYY-MM-DD`. Example: `last_verified: 2026-05-12`
+</ParamField>
+
+<ParamField path="aliases" type="list of strings">
+  Alternative names for this node that agents should recognize when resolving wikilinks. Useful for entities with abbreviations, nicknames, or variant spellings. Example: `aliases: ["Jane Smith", "J. Smith"]`
+</ParamField>
+
+<ParamField path="created_by" type="string">
+  The agent or human who created this node. Used for audit trails and for agents to understand provenance. Example: `created_by: gemini-scribe` or `created_by: human`
+</ParamField>
+
+---
+
+## Entity Types
+
+The `type:` field must be set to one of the following recognized values. Agents use the entity type to determine how to extract, link, and display the node.
+
+| Type | Description | Example Node |
+|---|---|---|
+| `project` | An active or archived initiative or client engagement | `Parafencing_Podcast_Launch.md` |
+| `person` | A stakeholder, client, team member, or contact | `John_Smith.md` |
+| `concept` | A theme, framework, methodology, or idea | `LLM_Wiki_Architecture.md` |
+| `event` | A meeting, competition, deadline, or milestone | `Paris_World_Cup_2026.md` |
+| `rule/schema` | A system protocol, agent instruction, or schema document | `SCHEMA.md` |
+| `protocol` | A repeatable workflow or standard operating procedure | `Weekly_Review_Protocol.md` |
+| `organization` | A company, committee, association, or vendor | `USA_Fencing.md` |
+| `resource` | A reference to an external document, article, or file | `Article_LLM_Scaling.md` |
+| `note` | A general-purpose note not yet promoted to a typed entity | *(most Inbox outputs)* |
+| `doc` | A formal document — report, proposal, contract | `Q2_Strategy_Report.md` |
+| `framework` | A higher-level conceptual architecture spanning multiple concepts | `Dual_Interface_Architecture.md` |
+
+<Note>
+  The `rule/schema` type triggers red color-coding in the Graph View and is reserved for files inside `99-System/`. Avoid using this type for regular notes — agents that encounter an unexpected `rule/schema` node outside the System folder will flag it as an anomaly.
+</Note>
+
+---
+
+## Memory Tier Fields
+
+Notes in Episodic and Working Memory carry additional fields that describe their position in the memory lifecycle. These fields are typically set by agents rather than humans.
+
+<ParamField path="tier" type="string">
+  The memory consolidation tier this note currently occupies. Determines where in the vault the note lives and how agents treat it during consolidation passes.
+  - `working` — raw, unprocessed (lives in `00-Inbox/`)
+  - `episodic` — session summaries and meeting records (lives in `01-Sessions/`)
+  - `semantic` — verified, structured entities (lives in `02-Library/`)
+  - `procedural` — workflows and system rules (lives in `99-System/`)
+</ParamField>
+
+<ParamField path="source" type="string">
+  The name of the agent that generated or ingested this note. Helps you trace where a note came from during audit. Example: `source: gemini-scribe`
+</ParamField>
+
+<ParamField path="supersedes" type="wikilink">
+  A link to the older node this note replaces. When an agent sets this field, it also lowers the target node's confidence score below `0.2` and sets its status to `archived`. Example: `supersedes: "[[Old_Project_Brief]]"`
+</ParamField>
+
+<ParamField path="projects" type="list of strings">
+  The project(s) this note is associated with. Used by Dataview queries to aggregate all notes related to a given project. Example: `projects: ["BAZA", "Parafencing_Podcast"]`
+</ParamField>
+
+---
+
+## Full Frontmatter Example
+
+This example shows a fully annotated semantic node for a person entity:
+
+```yaml
+---
+type: person
+status: active
+confidence: 0.9
+last_verified: 2026-05-12
+aliases: ["John", "J. Smith"]
+created_by: gemini-scribe
+tier: semantic
+source: gemini-scribe
+projects: ["Website_Redesign"]
+---
+```
+
+And an episodic memory note created from a meeting:
+
+```yaml
+---
+type: event
+status: active
+confidence: 0.8
+last_verified: 2026-05-10
+created_by: gemini-scribe
+tier: episodic
+source: gemini-scribe
+projects: ["Website_Redesign"]
+---
+```
+
+And a superseding note that replaces an outdated project brief:
+
+```yaml
+---
+type: doc
+status: active
+confidence: 0.95
+last_verified: 2026-05-20
+created_by: human
+tier: semantic
+supersedes: "[[Website_Brief_v1]]"
+projects: ["Website_Redesign"]
+---
+```
+
+---
+
+## Confidence Score Reference
+
+The `confidence` field uses a continuous scale from `0.0` to `1.0`. Agents assign an initial score at ingestion and update it automatically as new information arrives.
+
+| Range | Label | Meaning |
+|---|---|---|
+| `1.0` | Canonical | Absolute truth — immutable facts, verified identity fields |
+| `0.8 – 0.9` | High | Verified by multiple sources or recent explicit confirmation |
+| `0.5 – 0.7` | Working assumption | Single source, aging data, or plausible inference |
+| `< 0.5` | Uncertain | Unverified, speculative, or decaying |
+| `< 0.2` | Superseded | Old node replaced by a newer, higher-confidence node |
+| `0.0` | Dead | Completely unreliable — do not use |
+
+<Warning>
+  Do not manually set `confidence: 1.0` unless the fact is truly immutable (e.g., a birthdate confirmed by official documents). Agents treat `1.0` nodes as canonical and will not overwrite them during supersession — inflating confidence scores will cause stale data to persist.
+</Warning>
+
+---
+
+## The Machine Zone Footer
+
+In addition to YAML frontmatter, Baza uses a **Machine Zone** section at the bottom of semantic notes to hold typed graph relationship fields. This separates human-readable prose from machine-readable graph edges.
+
+```markdown
+---
+**🤖 Machine Zone Metadata**
+*Do not edit below this line.*
+
+[member_of:: [[Consulting_Projects]]]
+[depends_on:: [[Client_Brief]]]
+[supersedes:: [[Old_Project_Node]]]
+```
+
+Agents write all Dataview inline fields into this zone. You can read it, but treat it as agent-owned territory — editing it manually may break graph relationships.

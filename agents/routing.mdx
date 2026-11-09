@@ -1,0 +1,283 @@
+---
+title: "Agent Routing in Baza: Tasks, Aliases, and Environments"
+sidebarTitle: "Routing"
+description: "Learn how Baza routes tasks to the right agent using the routing index, aliases, and environment-aware assignment rules that keep the swarm coordinated."
+---
+
+Getting a task to the right agent sounds simple — but when your swarm spans a chat UI, a CLI, an Obsidian plugin, and a Docker container, "which agent handles this?" becomes a real coordination challenge. Baza solves it with a programmatic **routing index** that maps every agent to a directory of operating instructions, a set of aliases you use to address them, and the environments where they actually run. This page explains how that system works and how to use it.
+
+## The Routing Index
+
+The `_AGENT_ROUTING_INDEX.yaml` file is the source of truth for agent discovery in Baza. Every agent in the swarm has an entry that links three things: their local instruction directory, their aliases, and their known environments.
+
+When an agent needs to find another agent's operating manual — or when you need to know which agent to call for a task — the routing index is where you look first.
+
+```yaml
+version: "1.0"
+description: >
+  Programmatic routing index for agent context discovery. This helps agents
+  resolve an alias directly to the directory containing that agent's
+  operating manual.
+agents:
+  antigravity:
+    path: "./AGENT_ANTIGRAVITY/"
+    aliases: ["Raketa", "Ракета", "Iskra", "Искра", "Антигравити"]
+    environments: ["Antigravity Chat UI", "VS Code Extension"]
+  podruga:
+    path: "./AGENT_PODRUGA/"
+    aliases: ["Подруга", "Джемини"]
+    environments: ["Gemini CLI", "google-agents-cli", "Port 3000", "Docker Container"]
+  jules:
+    path: "./AGENT_JULES/"
+    aliases: ["Джулз", "Осьминожка", "Осьминожка Джулз", "Малыш Джулз", "Малыш"]
+  archivist:
+    path: "./AGENT_ARCHIVIST/"
+    aliases: ["Gromozeka", "Громозека"]
+  librarian:
+    path: "./AGENT_LIBRARIAN/"
+    aliases: ["Kuzya", "Кузя", "Домовой Кузя", "Домовенок Кузя"]
+    environments: ["Obsidian", "Obsidian Plugin"]
+  claude:
+    path: "./AGENT_CLAUDE/"
+    aliases: ["Клод", "Клодик", "Рыжий Друг", "Our forgetful buddy Claude"]
+  copilot:
+    path: "./AGENT_COPILOT/"
+    aliases: ["Kesha", "Кеша"]
+  codex:
+    path: "./AGENT_CODEX/"
+    aliases: ["Gena", "Гена", "Кодекс", "Крокодил Гена"]
+  coderabbit:
+    path: "./AGENT_CODERABBIT/"
+    aliases: ["Krolik", "Кролик", "Zayka", "Зайка"]
+  cline:
+    path: "./AGENT_CLINE/"
+    aliases: ["Znaika", "Знайка", "Клайн"]
+  gemma:
+    path: "./AGENT_GEMMA_4/"
+    aliases: ["Heavy Mama", "Мама Джемма", "Джемма"]
+  gemini_code_assist:
+    path: "./AGENT_GEMINI_CODE_ASSIST/"
+    aliases: ["Джемини-код-бот"]
+  gemini_app:
+    path: "./AGENT_GEMINI_APP/"
+    aliases: ["Gemini Gems", "Джемини на телефоне"]
+```
+
+<Note>
+  The `path` field points to the directory containing that agent's full operating manual — not a single file. Each agent directory holds the complete context the agent needs to operate: protocols, session history, and task-specific instructions.
+</Note>
+
+## Addressing Agents by Alias
+
+You address agents by alias in your prompts and instructions. Aliases are informal names that map back to a canonical agent entry in the routing index. They serve two purposes: they're easier to type than full agent identifiers, and they carry personality — which matters when you're coordinating a team of agents with distinct roles.
+
+<Tabs>
+  <Tab title="Calling Antigravity">
+    All three of these target the same agent:
+
+    ```text
+    Raketa, please review the architecture for the new ingestion pipeline.
+    ```
+    ```text
+    Искра — I need a D→CIR compliance check on this week's deliverables.
+    ```
+    ```text
+    Antigravity, orchestrate a handoff to Podruga for the migration script.
+    ```
+  </Tab>
+  <Tab title="Calling The Librarian">
+    All of these route to Kuzya inside Obsidian:
+
+    ```text
+    Kuzya, check for broken wikilinks in the Projects folder.
+    ```
+    ```text
+    Домовой Кузя — run a metadata audit on all person entities.
+    ```
+    ```text
+    The Librarian, find all orphaned nodes in the knowledge graph.
+    ```
+  </Tab>
+  <Tab title="Calling Podruga">
+    These route to the CLI environment:
+
+    ```text
+    Подруга, run the full vault migration script.
+    ```
+    ```text
+    Джемини, spin up the Docker container for the ingestion pipeline.
+    ```
+  </Tab>
+</Tabs>
+
+<Info>
+  Aliases aren't just nicknames — they're part of the routing contract. When an agent reads a task that references "Kuzya," it knows to look up `librarian` in the routing index and load instructions from `./AGENT_LIBRARIAN/`. The alias is the lookup key.
+</Info>
+
+## Environment-Based Routing
+
+Not every agent runs everywhere. The `environments` field in the routing index defines where each agent actually operates. This is the basis for **environment-aware routing** — directing tasks based on where the work needs to happen, not just who should do it.
+
+| Environment | Agent | What it's for |
+|---|---|---|
+| Antigravity Chat UI | Antigravity (Raketa) | Conversational orchestration, architecture review |
+| VS Code Extension | Antigravity, Gemini Code Assist | In-editor operations, code assistance |
+| Gemini CLI | Podruga (Подруга) | Command-line scripts and migrations |
+| google-agents-cli | Podruga | Agent-to-agent orchestration via CLI |
+| Port 3000 / Docker | Podruga | Backend services and containerized workflows |
+| Port 3002 | The Archivist (Gromozeka) | Legacy extraction and digital spring cleaning |
+| Obsidian / Plugin | The Librarian (Kuzya) | Vault-internal operations, strictly bounded |
+
+**Routing rule of thumb:**
+
+<CardGroup cols={2}>
+  <Card title="Task runs inside Obsidian?" icon="book">
+    Route to **The Librarian (Kuzya)**. If it requires external script execution, escalate to Podruga instead.
+  </Card>
+  <Card title="Task runs at the command line?" icon="terminal">
+    Route to **Podruga (Подруга)**. She owns the CLI, Docker, and backend orchestration.
+  </Card>
+  <Card title="Task needs strategic coordination?" icon="tower-control">
+    Route to **Antigravity (Raketa)**. Antigravity drives cross-agent task planning and protocol enforcement.
+  </Card>
+  <Card title="Task involves legacy or messy data?" icon="archive">
+    Route to **The Archivist (Gromozeka)**. Forensic extraction and de-duplication are Gromozeka's specialty.
+  </Card>
+</CardGroup>
+
+## Creating Agent Instructions for a New Task
+
+When you start a new task that requires agent involvement, you create a task instruction file and place it in the appropriate agent's directory (the path from the routing index). A well-formed task instruction includes:
+
+1. **Who** — the agent alias being addressed
+2. **What** — a specific, bounded task description
+3. **Where** — the files or directories involved
+4. **Protocol reference** — a pointer to `GLOBAL_RULES.md`
+5. **Log destination** — where the agent should write its session output
+
+```markdown
+# Task: Migrate Legacy Archive Batch 04
+
+**Addressed to:** Gromozeka (The Archivist)
+**Environment:** Port 3002
+**Priority:** High
+
+## Objective
+Extract all `type: person` entities from `00-Inbox/Legacy_Archive/Batch_04/`
+and promote verified entities to `05-People/` with correct frontmatter.
+
+## Scope
+- Source: `00-Inbox/Legacy_Archive/Batch_04/`
+- Target: `05-People/`
+- De-duplicate against existing entries in `05-People/`
+- Set confidence scores per extraction quality
+
+## Protocol
+Read GLOBAL_RULES.md before starting. Log all decisions and entity counts
+to `99-System/Logs/2026-05-24_Archivist_Batch04.md`.
+
+## Success Criteria
+- All person entities extracted and filed
+- No duplicates introduced
+- Confidence scores assigned to every new node
+- Session log written and closed
+```
+
+<Tip>
+  Keep task instructions specific and bounded. An agent with a precise scope performs better than one given a vague mandate. Include the exact file paths, not just folder descriptions.
+</Tip>
+
+## Setting Up the Universal Tether for a New Project
+
+When you start working in a new project directory, you need to tether every agent that will operate there before you begin. This is a three-step process.
+
+**Step 1: Create the tether file for each agent platform**
+
+Place the appropriate config file at the root of the project directory:
+
+<Tabs>
+  <Tab title="Claude">
+    Create `.clauderules` at the project root:
+
+    ```text
+    CRITICAL INSTRUCTION: Before taking any actions, you MUST read the master
+    protocol at: CORE_OS/00_CORE_PROTOCOLS/GLOBAL_RULES.md
+
+    LOGGING MANDATE: All session logs, insights, and decisions MUST be written
+    to CORE_OS/05_LOGS/ using the specific commands defined in GLOBAL_RULES.md.
+    ```
+  </Tab>
+  <Tab title="Gemini / Antigravity">
+    Create `GEMINI.md` or `ANTIGRAVITY_OPERATING_MANUAL.md` at the project root:
+
+    ```text
+    CRITICAL INSTRUCTION: Before taking any actions, you MUST read the master
+    protocol at: CORE_OS/00_CORE_PROTOCOLS/GLOBAL_RULES.md
+
+    LOGGING MANDATE: All session logs, insights, and decisions MUST be written
+    to CORE_OS/05_LOGS/ using the specific commands defined in GLOBAL_RULES.md.
+    ```
+  </Tab>
+  <Tab title="Copilot">
+    Create `.github/copilot-instructions.md` at the project root:
+
+    ```text
+    CRITICAL INSTRUCTION: Before taking any actions, you MUST read the master
+    protocol at: CORE_OS/00_CORE_PROTOCOLS/GLOBAL_RULES.md
+
+    LOGGING MANDATE: All session logs, insights, and decisions MUST be written
+    to CORE_OS/05_LOGS/ using the specific commands defined in GLOBAL_RULES.md.
+    ```
+  </Tab>
+  <Tab title="Cursor / Windsurf">
+    Create `.cursorrules` or `.windsurfrules` at the project root:
+
+    ```text
+    CRITICAL INSTRUCTION: Before taking any actions, you MUST read the master
+    protocol at: CORE_OS/00_CORE_PROTOCOLS/GLOBAL_RULES.md
+
+    LOGGING MANDATE: All session logs, insights, and decisions MUST be written
+    to CORE_OS/05_LOGS/ using the specific commands defined in GLOBAL_RULES.md.
+    ```
+  </Tab>
+</Tabs>
+
+**Step 2: Add the project to the routing index**
+
+If this is a new project with its own agent configuration, add an entry to `_AGENT_ROUTING_INDEX.yaml` pointing to the project-specific agent directories.
+
+**Step 3: Verify the tether on first session**
+
+Start the agent's first session with an explicit verification prompt:
+
+```text
+Before anything else: read GLOBAL_RULES.md and confirm you've loaded it.
+Then read the routing index at 99-System/Agents/_AGENT_ROUTING_INDEX.yaml
+and confirm the active agents for this project.
+```
+
+<Warning>
+  Skipping the tether setup is the most common source of agent drift. An untethered agent will improvise its own conventions, contradict the vault schema, and write logs nowhere (or everywhere). The tether file takes two minutes to create — do it before the first session, not after you've noticed the drift.
+</Warning>
+
+## How Routing Resolves in Practice
+
+Here's the full routing chain from task request to agent action:
+
+```
+You say: "Kuzya, audit the metadata in 05-People/"
+    ↓
+Routing index resolves "Kuzya" → librarian → ./AGENT_LIBRARIAN/
+    ↓
+Agent loads operating manual from ./AGENT_LIBRARIAN/
+    ↓
+Agent checks tether file → reads GLOBAL_RULES.md
+    ↓
+Agent confirms environment: Obsidian / Obsidian Plugin ✓
+    ↓
+Agent executes task within Baza boundaries
+    ↓
+Agent writes session log to CORE_OS/05_LOGS/
+```
+
+Every step in this chain is intentional. The alias lookup, the manual load, the tether check, the environment confirmation, and the log write — these aren't bureaucratic overhead, they're what makes the swarm trustworthy across sessions.

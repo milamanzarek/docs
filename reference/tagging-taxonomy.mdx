@@ -1,0 +1,159 @@
+---
+title: "Tagging Taxonomy: Hierarchical Hashtags for Baza Notes"
+sidebarTitle: "Tagging Taxonomy"
+description: "Baza's hierarchical hashtag system uses four dimensions — topic, type, geo, and status — to help agents classify and route your notes automatically."
+---
+
+Baza's tagging system gives you a lightweight, consistent language for describing any note you drop into the Inbox. You don't need to think about folders or file structures — just add a hashtag or two in the body of your note and agents will parse them into structured metadata, route the note to the correct thematic folder, and connect it to the right nodes in the knowledge graph.
+
+## How the Taxonomy Works
+
+Every tag in Baza follows a two-level hierarchy: a **dimension prefix** followed by a **value**, separated by a slash. For example, `#type/meeting` tells an agent this note is a meeting record, while `#geo/usa/la` tells it the geographic context is Los Angeles. You can mix and match dimensions freely — a single note can have tags from all four dimensions at once.
+
+Tags live in **body text**, not frontmatter. Drop them anywhere in a raw note in `00-Inbox/`. The agent swarm extracts them during processing and promotes them into YAML frontmatter and graph relationships automatically.
+
+---
+
+## The Four Tag Dimensions
+
+<CardGroup cols={2}>
+  <Card title="#topic/" icon="tag">
+    The **subject domain** of the note. Use this to tell agents which thematic folder the note belongs to and which projects or entities to connect it to.
+  </Card>
+  <Card title="#type/" icon="file-lines">
+    The **content type** of the note. This drives how agents process and store the note — a `#type/meeting` note becomes an episodic memory record; a `#type/resource` note becomes a Library pointer.
+  </Card>
+  <Card title="#geo/" icon="location-dot">
+    The **geographic context** of the note. Use this for anything location-specific — events, clients, venues, or region-scoped projects.
+  </Card>
+  <Card title="#status/" icon="circle-check">
+    The **urgency or lifecycle stage** of the note. Agents use this to prioritize processing and to apply color-coding in the Obsidian Graph View.
+  </Card>
+</CardGroup>
+
+---
+
+## #topic/ — Subject Domain
+
+Use `#topic/` to declare what the note is *about*. This is the primary signal agents use to route notes into your thematic library folders (e.g., `Fencing_K`, `Consulting_K`).
+
+| Tag | Meaning |
+|---|---|
+| `#topic/fencing` | Fencing, parafencing, sport or coaching content |
+| `#topic/consulting` | Client work, strategy, business development |
+| `#topic/ai` | Artificial intelligence, LLMs, agent architecture |
+| `#topic/personal_brand` | Social media, public presence, content strategy |
+
+<Tip>
+  You can extend `#topic/` with your own values at any time — agents will recognize any tag that matches the `#topic/` prefix and use it to cluster related notes.
+</Tip>
+
+---
+
+## #type/ — Content Type
+
+Use `#type/` to describe *what kind of thing* the note is. This dimension controls which memory tier the note is filed into and which Dataview queries it surfaces in.
+
+| Tag | Memory Tier | Description |
+|---|---|---|
+| `#type/meeting` | Episodic | Meeting notes, session records, call logs |
+| `#type/idea` | Working | Raw ideas, brainstorms, unvalidated hypotheses |
+| `#type/draft` | Working | In-progress documents or outlines |
+| `#type/resource` | Semantic | References, articles, links to external content |
+| `#type/contact` | Semantic | People, stakeholders, client profiles |
+
+---
+
+## #geo/ — Geographic Context
+
+Use `#geo/` for any note that is meaningfully tied to a location. The hierarchy mirrors real-world geography and can go as deep as needed.
+
+```
+#geo/global             → worldwide scope
+#geo/usa/la             → Los Angeles, USA
+#geo/europe/paris       → Paris, Europe
+#geo/usa/newyork        → New York, USA
+```
+
+You don't need to use `#geo/` on every note — only add it when location is relevant context for agents or for future queries (e.g., "show me all consulting notes from LA").
+
+---
+
+## #status/ — Urgency and Lifecycle
+
+Use `#status/` to signal the current state of a note. Agents read this tag to set processing priority and to apply graph color-coding.
+
+| Tag | Meaning | Graph Color |
+|---|---|---|
+| `#status/urgent` | Needs immediate agent or human attention | 🔴 Red |
+| `#status/active` | Currently in use or being developed | *(default)* |
+| `#status/review` | Awaiting review before promotion to Semantic Memory | *(default)* |
+| `#status/archived` | Superseded, resolved, or no longer relevant | ⚫ Grey |
+
+<Warning>
+  Avoid applying `#status/archived` manually unless you are certain the note is no longer needed. Agents manage archival automatically during the supersession process — manually archiving a note can confuse the graph health checks.
+</Warning>
+
+---
+
+## Tagging Examples
+
+These examples show how to combine dimensions to give agents maximum routing precision with minimal effort.
+
+```
+"Meeting notes with John about the new website."
+→ #type/meeting #topic/consulting
+
+"Idea for a new social media post about Parafencing in LA."
+→ #type/idea #topic/fencing #geo/usa/la
+
+"Urgent: follow up on contract renewal before Friday."
+→ #status/urgent #topic/consulting
+
+"Article on LLM memory architectures — save for later."
+→ #type/resource #topic/ai
+
+"Notes from the Paris fencing committee meeting."
+→ #type/meeting #topic/fencing #geo/europe/paris
+```
+
+<Info>
+  You don't need to get the tags perfect. Agents are designed to make reasonable inferences from partial tagging. A note with only `#type/meeting` will still be filed correctly — it just won't get topic-specific graph connections until you or an agent adds the missing dimensions.
+</Info>
+
+---
+
+## How Agents Use Tags
+
+When you drop a note into `00-Inbox/`, the agent swarm:
+
+1. **Parses** all `#dimension/value` hashtags found anywhere in the body text.
+2. **Promotes** the tags into YAML frontmatter fields (`type:`, `status:`) and assigns the note to the correct memory tier.
+3. **Routes** the note to the matching thematic library folder based on `#topic/`.
+4. **Creates typed graph links** connecting the note to related entities (e.g., a `#type/meeting #topic/consulting` note gets linked to the relevant client node).
+5. **Logs** all changes to the current week's Baza Activity Log so you can review exactly what happened.
+
+---
+
+## Graph Color-Coding Reference
+
+Baza maps tag combinations to colors in the Obsidian Graph View so you can visually identify node types at a glance. Configure these rules in **Obsidian → Graph View → Groups**.
+
+| Color | Trigger Condition | Represents |
+|---|---|---|
+| 🔴 Red | `#status/urgent` or `type: rule/schema` | Urgent items and core system files |
+| 🟡 Yellow | `#type/idea` or `status: draft` | Working memory and unvalidated ideas |
+| 🔵 Blue | `#type/meeting` or `tier: episodic` | Meeting records and episodic memories |
+| 🟢 Green | `#topic/fencing` or `type: project` | Fencing content and active projects |
+| 🟣 Purple | `#topic/consulting` or `type: organization` | Consulting content and organizations |
+| ⚫ Grey | `#status/archived` | Superseded or decaying nodes |
+
+<Tip>
+  **Reduce graph clutter instantly.** Your vault may contain thousands of file-pointer nodes from the Hybrid Storage layer. To hide them and focus on real knowledge nodes, add this filter to the **Filter** field in your Graph View settings:
+
+  ```
+  -path:"02-Library/Resources"
+  ```
+
+  This single filter removes all resource pointer nodes from the visual graph without deleting them.
+</Tip>

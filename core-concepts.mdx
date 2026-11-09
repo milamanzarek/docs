@@ -1,0 +1,272 @@
+---
+title: "Core Concepts: Baza Architecture and Key Principles"
+sidebarTitle: "Core Concepts"
+description: "Understand the Dual-Interface Architecture, memory tiers, knowledge graph relationships, and the agent swarm model that powers Baza."
+---
+
+Baza is built on a small set of interlocking ideas. Once you understand how these concepts fit together, everything else in the system—the folder structure, the tagging rules, the agent behavior, and the session lifecycle—becomes self-explanatory. This page explains each concept in depth, starting with the architectural foundation and working outward to the operational details.
+
+---
+
+## The Dual-Interface Architecture
+
+The central insight behind Baza is that a single `.md` file can serve two completely different audiences without any modification, export step, or translation layer.
+
+**The Human Interface** is everything you see in Obsidian: your folder hierarchy, note titles, wikilinks, graph view, and the formatted prose you read and write every day. This layer is optimized for navigation, skimmability, and visual intuition. Folder names are short, thematic, and easy to remember (for example, `Consulting_K`, `Fencing_K`).
+
+**The Machine Interface** is the hidden layer that AI agents read: YAML frontmatter at the top of each file, typed relationship links embedded in note bodies, and Dataview metadata fields. Agents navigate the vault by following these structured signals—not by reading your prose and not by relying on your folder structure.
+
+```yaml
+---
+type: person
+status: active
+confidence: 0.9
+last_verified: 2026-04-13
+---
+```
+
+<Info>
+  Do not manually edit YAML frontmatter unless you are correcting a machine error. Agents own this layer and use it to build the knowledge graph. Editing it by hand can corrupt typed relationships and break agent processing pipelines.
+</Info>
+
+The genius of this separation is that neither interface gets in the other's way. You reorganize folders and rename notes freely—agents ignore your folder paths entirely. Agents inject and update frontmatter fields—you never see them unless you switch to raw edit mode. The shared Markdown file is the contract between both parties.
+
+---
+
+## Memory Tiers
+
+Baza models knowledge as having a lifecycle, moving from raw input to verified fact through four distinct tiers. Each tier lives in a different part of the vault and has different rules about what belongs there.
+
+### Working Memory — `00-Inbox`
+Working memory is where all new information enters the system. You drop raw notes, voice memo transcripts, half-formed ideas, and meeting dumps here. Nothing in `00-Inbox` is expected to be structured, correct, or connected. It is the drop-off zone.
+
+### Episodic Memory — Session Logs & Meeting Minutes
+Once an agent processes a Working Memory note, the chronological record of that session or meeting graduates to Episodic Memory. These are time-stamped, compressed records of events—useful for reconstructing what happened in a specific meeting or work session but not yet generalized into stable facts.
+
+### Semantic Memory — `02-Library/[Topic]_K`
+Semantic Memory is the core of your knowledge graph. It contains verified facts, entity pages (people, projects, organizations, concepts), and curated summaries that hold true across sessions. A note reaches Semantic Memory only after an agent has validated its content, resolved conflicts with existing nodes, and established typed relationships to the surrounding graph.
+
+### Procedural Memory — `99-System`
+Procedural Memory contains the operating instructions for the system itself: agent prompts, schemas, workflow rules, and automation scripts. This layer changes infrequently and only when you deliberately update how the system works.
+
+<Note>
+  Notes move **upward** through the tiers automatically as agents process them. You only ever write into Working Memory. Everything above that is the agents' output. This is what makes Baza a zero-friction capture system—you never need to decide where something belongs at the moment you write it.
+</Note>
+
+---
+
+## The Knowledge Graph
+
+Baza's knowledge graph is built on three interlocking mechanisms that together create a navigable, semantically rich web of information.
+
+### MOC Scaffolds (Maps of Content)
+Every major topic in your Library has a Map of Content note that serves as the entry point for that knowledge cluster. MOCs are maintained by the Librarian agent and updated automatically as new nodes are filed into the topic folder.
+
+### YAML Links and Typed Relationships
+Rather than connecting notes with flat `[[wikilinks]]` alone, Baza agents establish **typed relationship edges** in YAML and note bodies. These edges carry semantic meaning:
+
+```markdown
+[depends_on:: [[Project_Alpha]]]
+[member_of:: [[Consulting_K_MOC]]]
+[contradicts:: [[Old_Hypothesis_Node]]]
+[supersedes:: [[Draft_Strategy_2025]]]
+```
+
+Typed relationships let agents answer questions like "what does this project depend on?" or "which facts has this note overturned?" that flat wikilinks cannot support.
+
+### Wikilinks for Human Navigation
+Standard `[[wikilinks]]` remain the primary navigation mechanism for the Human Interface. They appear in Obsidian's graph view, power backlink panels, and let you jump between related notes instantly. Agents add typed edges on top of your wikilinks—they do not replace them.
+
+<Info>
+  You can filter out the Resource Pointer layer from your Graph View at any time by adding `-path:"02-Library/Resources"` to the Filter field in Graph settings. This reveals the semantic structure of your knowledge graph without the noise of file references.
+</Info>
+
+---
+
+## Confidence Scoring and Supersession
+
+Every knowledge node in Baza carries a confidence score—a decimal value between `0.0` and `1.0` stored in its YAML frontmatter:
+
+```yaml
+confidence: 0.85
+last_verified: 2026-05-22
+```
+
+Confidence scores reflect how well-verified a fact is. A score of `0.9` or above represents a stable, multiply-confirmed claim. A score below `0.5` flags a node for review. Scores decay over time if a node goes unverified, and they strengthen each time new evidence confirms the claim.
+
+**Supersession** is how Baza handles contradictions without destroying history. When an agent ingests new information that conflicts with an existing node, it does not delete the old node. Instead, it creates a new node and establishes a typed link:
+
+```markdown
+[supersedes:: [[Old_Strategy_2024]]]
+```
+
+The old node's confidence score drops, its status is marked as `archived`, and the new node becomes the canonical source. The old node remains in the graph as a historical record, traceable through the supersession chain.
+
+<Note>
+  This approach means your knowledge graph is **append-only by default**. You can always trace the lineage of any claim back through its supersession history to understand how your understanding evolved over time.
+</Note>
+
+---
+
+## The Agent Swarm Model
+
+Baza does not rely on a single AI model. It coordinates a swarm of specialized agents, each operating in its own environment with its own domain of authority. This division of labor prevents any single agent from needing a context window large enough to hold everything—each agent knows exactly what it is responsible for.
+
+| Agent | Environment | Domain |
+|---|---|---|
+| **Antigravity** | Antigravity Chat GUI | Chief Orchestrator. Drives task execution, reviews architecture, enforces protocols. |
+| **Podruga** | CLI Terminal | Lead Integrator. Handles system-wide scripts and backend orchestration. |
+| **The Archivist** | Dedicated session | Digital Librarian. Focuses on legacy archive extraction, deduplication, and semantic integrity. |
+| **The Librarian** | Obsidian | Obsidian Knowledge Guardian. Maintains link health, metadata precision, and the human-readable graph. |
+| **Baby Jules** | GitHub | Asynchronous Developer. Commits code, works autonomously on pull requests in the background. |
+
+All agents are bound by the **Universal Tether Rule**: before taking any action, every agent must read the master protocol file at `99-System`. This forces all agents to operate from the same shared context rather than building independent, conflicting interpretations of the vault state.
+
+<Info>
+  The Universal Tether Rule is what prevents agent amnesia at the swarm level. Individual agents may have limited session memory, but the vault itself—with its typed relationships, confidence scores, and activity logs—serves as the persistent external memory that keeps the entire swarm synchronized.
+</Info>
+
+---
+
+## The Inbox as Drop-Off Zone
+
+The `00-Inbox` folder is designed around a single principle: **zero friction at the point of capture**. When you have an idea, finish a meeting, or receive information you want to keep, the only decision you need to make is whether to open Obsidian and type. Everything else is automated.
+
+You do not need to choose a folder. You do not need to write YAML. You do not need to think about how this note connects to anything else. Drop it in `00-Inbox` with a few optional hashtags and walk away.
+
+The system supports multiple capture paths into `00-Inbox`:
+
+- **Desktop:** Create a new note directly in Obsidian.
+- **Mobile:** Use your phone's Obsidian app to dump notes and voice memos into `00-Inbox`. They sync to your desktop via Google Drive automatically.
+- **iOS Shortcut:** A 2-tap home screen shortcut triggers an Obsidian Advanced URI to create a new templated note in `00-Inbox` without even opening the app.
+
+When you run your next sync on desktop, the local sync pulls all new `00-Inbox` entries from Google Drive, and your agents pick them up for processing automatically.
+
+---
+
+## Tagging Taxonomy
+
+Baza uses a hierarchical hashtag system that lets you annotate notes at capture time with zero friction. Tags follow a `#dimension/value` pattern and are parsed by agents into structured YAML frontmatter automatically.
+
+The four core tagging dimensions are:
+
+| Dimension | Prefix | Example Values |
+|---|---|---|
+| **Topic / Domain** | `#topic/` | `consulting`, `fencing`, `ai`, `research` |
+| **Content Type** | `#type/` | `meeting`, `idea`, `draft`, `resource`, `contact` |
+| **Geographic Context** | `#geo/` | `usa/la`, `europe/paris`, `global` |
+| **Status / Urgency** | `#status/` | `urgent`, `active`, `review`, `archived` |
+
+You can add tags anywhere in the body of a note. Agents will detect and process them when the note is picked up from `00-Inbox`.
+
+---
+
+## CLI Commands — bzm.py
+
+`bzm.py` is Baza's command-line vault manager. Place it in `99-System/Scripts/` and run it from your vault root. It exposes two core commands:
+
+### sync
+
+```bash
+python 99-System/Scripts/bzm.py sync
+```
+
+Mirrors your entire vault to the configured Google Drive folder using a directory-level sync. Excludes internal system directories that do not need to be mirrored. Run this regularly during active work sessions to keep your off-site backup current.
+
+### audit
+
+```bash
+python 99-System/Scripts/bzm.py audit
+```
+
+Performs a full vault health check. The audit:
+
+1. Builds an index of every Markdown file in the vault.
+2. Identifies duplicate files (by SHA-256 content hash, for files over 100 bytes).
+3. Checks for broken internal wikilinks.
+4. Writes a full report to `99-System/Logs/VAULT_AUDIT_REPORT.md`.
+
+Run `audit` periodically to catch link rot and unintentional duplicates before they accumulate.
+
+---
+
+## Archive Ingestion — ArchiveIngestionEngine
+
+When you have a large collection of legacy documents to bring into Baza's vector search layer, use the `ArchiveIngestionEngine` class from the ingestion schema. It handles metadata validation and upserts chunks into the local Chroma DB collection.
+
+### ArchiveIngestionEngine.prepare_metadata()
+
+```python
+engine.prepare_metadata(raw_meta: dict) -> dict
+```
+
+Validates and sanitizes a raw metadata dictionary to match the Baza ingestion schema before writing to the vector store. It enforces the following fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `source_platform` | string | Original platform (e.g., `evernote`, `notion`, `journal`) |
+| `original_date` | string | ISO date of first creation (e.g., `2014-08-15`) |
+| `original_title` | string | Title of the source note |
+| `language` | string | Dominant language: `en`, `ru`, or `bilingual` |
+| `category` | string | Primary knowledge category (e.g., `consulting`, `research`) |
+| `tags` | list | Extracted tags, stored as a comma-separated string |
+| `file_path_pointer` | string | Relative vault path to the corresponding Resource Pointer note |
+
+Any missing fields are filled with safe defaults so no chunk is ever upserted with invalid metadata.
+
+### ArchiveIngestionEngine.ingest_document()
+
+```python
+engine.ingest_document(doc_id: str, text_chunk: str, raw_meta: dict)
+```
+
+Upserts a single text chunk into the vector collection with standardized metadata. Internally calls `prepare_metadata()` before writing, so you can pass raw, unsanitized metadata dictionaries directly.
+
+```python
+from baza_vector_ingest import ArchiveIngestionEngine
+
+engine = ArchiveIngestionEngine(host="127.0.0.1", port=8000)
+
+engine.ingest_document(
+    doc_id="evernote-fencing-001-chunk-0",
+    text_chunk="Footwork drills for épée fencing: advance, retreat, lunge...",
+    raw_meta={
+        "source_platform": "evernote",
+        "original_date": "2015-03-12",
+        "original_title": "Fencing Footwork Drills",
+        "language": "en",
+        "category": "fencing",
+        "tags": ["coaching", "epee", "footwork"],
+        "file_path_pointer": "02-Library/Fencing_K/Fencing_Footwork_PTR.md"
+    }
+)
+```
+
+---
+
+## Hot vs Cold Storage — The Resource Pointer Pattern
+
+Obsidian's graph view and indexing engine are optimized for Markdown files, not binary assets. Storing thousands of PDFs, images, and video files directly inside your vault causes performance degradation and makes the graph impossible to navigate.
+
+Baza solves this with a **Hot vs Cold** storage split:
+
+- **Hot (Control Plane):** Everything inside the active Obsidian vault. Only `.md`, `.json`, and `.csv` files. Lightweight, fast, and fully indexed.
+- **Cold (Data Lake):** Heavy binary assets—PDFs, images, videos, large transcripts—stored in external locations such as Google Drive or cloud storage. The vault never touches these files directly.
+
+When an agent encounters a large asset, it moves the file to cold storage and creates a lightweight **Resource Pointer** node inside Obsidian in its place:
+
+```yaml
+---
+type: resource_pointer
+source_zone: cloud_storage
+gcs_uri: gs://your-bucket/path/to/file.pdf
+source_hash: "a3f9c2..."
+processing_status: indexed
+---
+```
+
+The pointer node contains the asset's metadata, a clickable link to the external file, and any extracted summaries or key facts. You get the benefit of the asset's content in your knowledge graph without paying the performance cost of storing the file inside the vault.
+
+<Note>
+  The Resource Pointer Pattern is what makes it possible to have a large, rich knowledge base without vault bloat. Only high-value summaries, metadata, links, and agent decisions return to the active vault. The vault stays lightweight, searchable, and fast—regardless of how large your total knowledge base grows.
+</Note>

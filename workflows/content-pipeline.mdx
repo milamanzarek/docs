@@ -1,0 +1,249 @@
+---
+title: "Content Pipeline: From Raw Input to Semantic Knowledge"
+sidebarTitle: "Content Pipeline"
+description: "Understand how Baza transforms raw captures — notes, clippings, transcripts, documents — into a structured, searchable semantic knowledge graph."
+---
+
+Every piece of information you bring into Baza — a scribbled idea, a meeting transcript, a clipped article, a voice memo — enters a multi-stage pipeline that converts raw text into structured, typed knowledge. By the time a capture reaches your Library, it has a unique identity, a confidence score, typed relationships to other nodes, and a clear place in the memory hierarchy. Understanding this pipeline helps you capture better, trust the output more, and intervene at exactly the right moments when you need human judgment in the loop.
+
+## Pipeline Overview
+
+```
+Raw Input (notes, clippings, voice transcripts, documents)
+      ↓
+00-Inbox (Drop-Off Zone — Working Memory)
+      ↓
+Entity Extraction & Metadata Generation
+      ↓
+Confidence Scoring
+      ↓
+Typed Relationship Linking
+      ↓
+Supersession Check (contradicts existing data?)
+      ↓
+02-Library/[Topic]_K (Episodic / Semantic Memory)
+      ↓
+Nightly Consolidation (Working → Episodic → Semantic promotion)
+```
+
+---
+
+## Stage 1: Raw Input
+
+Baza accepts captures from multiple sources. Every input type lands in `00-Inbox` or a designated staging area before processing begins.
+
+<CardGroup cols={2}>
+  <Card title="Manual notes" icon="pencil">
+    Notes you write directly in Obsidian, on mobile, or on your PC. Drop them in `00-Inbox` with optional inline tags.
+  </Card>
+  <Card title="Voice transcripts" icon="microphone">
+    Processed by the Voice Notes pipeline — already formatted and carrying YAML frontmatter when they arrive in `VOICE_INBOX`.
+  </Card>
+  <Card title="Clippings & documents" icon="file-text">
+    Web clippings, PDF extracts, or pasted article text. Drop these in `00-Inbox` like any other note.
+  </Card>
+  <Card title="Legacy & imported data" icon="database">
+    Exports from Notion, Airtable, Keep, or other tools. These enter via `00-Inbox` or the designated `Legacy_Archive` ingestion path.
+  </Card>
+</CardGroup>
+
+<Info>
+  Baza separates "Hot" content (`.md`, `.json`, `.csv`) from "Cold" assets (`.pdf`, `.mp4`, `.jpg`). Heavy files are moved to external storage and replaced with lightweight **Resource Pointer** nodes in Obsidian — a clickable link and metadata stub — so vault performance stays fast regardless of how many documents you capture.
+</Info>
+
+---
+
+## Stage 2: Entity Extraction
+
+<Steps>
+  <Step title="Agents parse the raw note">
+    When an agent picks up a note from `00-Inbox`, it reads the full body text and any inline hashtags you added. The agent extracts:
+
+    - **Named entities** — people, organizations, projects, locations mentioned in the text
+    - **Content type** — meeting, idea, resource, contact, draft, etc. (inferred from language patterns or your `#type/` tag)
+    - **Topic domain** — consulting, fencing, AI, personal brand, etc. (from `#topic/` tags or keyword matching)
+    - **Status signals** — urgency indicators, date references, action items
+    - **Geographic context** — location references or your `#geo/` tags
+
+    The agent then promotes all extracted metadata into YAML frontmatter at the top of the note.
+  </Step>
+
+  <Step title="Typed entity frontmatter is generated">
+    Every processed note becomes a **typed entity**. The type field drives everything downstream — how agents link the note, where it gets filed, and how it ages through the memory tiers.
+
+    ```yaml
+    ---
+    type: person
+    status: active
+    confidence: 0.9
+    last_verified: 2026-05-27
+    ---
+    ```
+
+    ```yaml
+    ---
+    type: meeting
+    status: active
+    classification: cons
+    confidence: 0.85
+    created: 2026-05-27
+    participants:
+      - "[[John_Doe]]"
+    projects:
+      - CONS-PROJ-012
+    tags:
+      - meeting
+      - consulting
+    ---
+    ```
+
+    <Note>
+      Once a note has agent-generated frontmatter, treat it as machine-managed. Don't edit it unless you're correcting a clear error. Agents use frontmatter to build and maintain the knowledge graph — manual edits can break relationships.
+    </Note>
+  </Step>
+</Steps>
+
+---
+
+## Stage 3: Confidence Scoring
+
+Every fact and entity in Baza carries a **confidence score** between `0.0` and `1.0`. This score tells you and the agents how reliable a piece of knowledge is, and it drives decisions about when to promote, flag, or supersede a node.
+
+| Score range | What it means | Agent behaviour |
+|---|---|---|
+| `0.9 – 1.0` | Verified, high-confidence fact | Promoted freely to Semantic Memory |
+| `0.7 – 0.89` | Likely accurate, minimal uncertainty | Filed normally; reviewed periodically |
+| `0.5 – 0.69` | Uncertain or inferred | Flagged for your review before promotion |
+| `0.0 – 0.49` | Low confidence or stale data | Marked for manual verification or archival |
+
+Confidence scores decrease over time if a node isn't verified or referenced. This prevents "wiki rot" — outdated facts silently persisting as if they were current.
+
+<Tip>
+  You can manually set or override a confidence score by editing the `confidence` field in frontmatter. Use this when you have direct knowledge that the agent-assigned score is wrong — for example, bumping a person's contact details to `confidence: 1.0` after you've verified them personally.
+</Tip>
+
+---
+
+## Stage 4: Typed Relationship Linking
+
+Agents don't connect notes with flat wikilinks. They use **typed semantic edges** that describe the nature of the relationship between two nodes. These edges turn your vault from a collection of linked documents into a true knowledge graph.
+
+```markdown
+[depends_on:: [[CORE-PROJ-001]]]
+[member_of:: [[THE_INTEGRATOR_WORLD_MAP]]]
+[contradicts:: [[Old_Strategy_2025]]]
+[supersedes:: [[Draft_Note_April]]]
+```
+
+| Relationship type | Meaning |
+|---|---|
+| `[depends_on::]` | This node cannot be understood without the linked node |
+| `[member_of::]` | This node is part of a larger collection or project |
+| `[contradicts::]` | This node presents information that conflicts with the linked node |
+| `[supersedes::]` | This node replaces or updates the linked node |
+
+<Info>
+  Typed relationships are what make Baza's graph view meaningful. When you open the Graph View, you're not just seeing which notes mention each other — you're seeing a semantic map of how concepts, people, and projects actually relate.
+</Info>
+
+---
+
+## Stage 5: Supersession (When New Data Contradicts Old Data)
+
+Baza never deletes conflicting knowledge — it **supersedes** it. When the pipeline encounters new information that contradicts an existing node, it:
+
+1. Creates the new node with the updated information
+2. Adds a `[supersedes:: [[Old_Node]]]` relationship pointing back to the old node
+3. Drops the old node's confidence score (typically to `0.2 – 0.4`)
+4. Marks the old node with `status: superseded` in its frontmatter
+
+```yaml
+# New node (the update)
+---
+type: person
+status: active
+confidence: 0.95
+---
+[supersedes:: [[John_Doe_2025]]]
+
+# Old node (preserved, not deleted)
+---
+type: person
+status: superseded
+confidence: 0.2
+last_verified: 2025-11-14
+---
+```
+
+<Warning>
+  Superseded nodes are greyed out in the Graph View but remain in your vault. Don't delete them manually. They serve as an audit trail — you can always trace how a piece of knowledge evolved over time. Archival cleanup is handled by the agents during nightly consolidation.
+</Warning>
+
+---
+
+## Stage 6: Memory Tier Promotion
+
+Baza organizes knowledge into four memory tiers. Every note starts in Working Memory and moves up the tiers as it accumulates verification and references. The nightly consolidation run handles promotions automatically.
+
+<CardGroup cols={2}>
+  <Card title="Working Memory" icon="inbox">
+    Raw inputs sitting in `00-Inbox` or staging areas. Not yet processed or verified. High volume, low confidence.
+  </Card>
+  <Card title="Episodic Memory" icon="calendar">
+    Chronological records — session logs, meeting notes, timestamped events. Filed in `02-Library` but not yet abstracted into general knowledge.
+  </Card>
+  <Card title="Semantic Memory" icon="brain">
+    Verified facts, core entities (people, projects, organizations), and synthesized insights. The stable, high-confidence layer of the knowledge graph.
+  </Card>
+  <Card title="Procedural Memory" icon="settings">
+    Schemas, agent rules, and system protocols stored in `99-System`. Rarely changes; drives all agent behaviour.
+  </Card>
+</CardGroup>
+
+**Promotion criteria:**
+- A note moves from **Working → Episodic** after entity extraction and initial filing
+- A note moves from **Episodic → Semantic** when its confidence score exceeds `0.7` and it has been referenced or verified at least once
+- Semantic nodes are reviewed for demotion if their `last_verified` date is more than 90 days old and their confidence score has fallen below `0.5`
+
+---
+
+## Stage 7: Google Drive Mirror Sync
+
+Run `python bzm.py sync` at any point during or after a session to push your vault to the **Google Drive hot mirror**. This makes your latest notes available on mobile and other devices without requiring a full Git push.
+
+The sync follows a **local-first** principle:
+- In-vault agents always read from the local `baza_manifest.json` for zero-latency operations
+- The Google Drive mirror is a read-friendly copy for mobile access, not the source of truth
+- Git remains the canonical version history for your vault
+
+```python
+# Excerpt from bzm.py — sync function
+def sync():
+    """Synchronizes the vault to the Google Drive Hot Mirror."""
+    print("🚀 Initializing Google Drive Hot Mirror Sync...")
+    cmd = f'robocopy "{VAULT_DIR}" "{MIRROR_DIR}" /MIR {exclude_str} /R:1 /W:1'
+    result = subprocess.run(cmd, shell=True, text=True, capture_output=True)
+    if result.returncode < 8:
+        print("✅ Baza Hot Mirror synchronized successfully.")
+    else:
+        print(f"❌ Robocopy warning/error (code {result.returncode})")
+```
+
+<Warning>
+  `robocopy` is a Windows built-in. On macOS or Linux, replace the sync command in `bzm.py` with `rsync` or another directory-mirroring tool.
+</Warning>
+
+---
+
+## Noise Reduction: The Ingestion Blacklist
+
+Not everything that enters `00-Inbox` should make it into the knowledge graph. Baza's agents maintain an **Ingestion Blacklist** to filter out system-generated noise before it pollutes vault indexing and degrades performance:
+
+- AI agent browser recordings and debug logs
+- Python tracebacks and error dumps
+- Temporary processing artifacts
+- Duplicate files (detected by SHA-256 hash comparison during `bzm.py audit`)
+
+<Tip>
+  Run `python bzm.py audit` periodically to generate a `VAULT_AUDIT_REPORT.md` in `99-System/Logs`. This report identifies duplicate files and flags broken internal links — two of the most common sources of graph noise as your vault grows.
+</Tip>

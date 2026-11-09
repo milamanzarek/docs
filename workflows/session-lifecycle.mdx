@@ -1,0 +1,163 @@
+---
+title: "Session Lifecycle: Sync Your Vault and Run Health Audits"
+sidebarTitle: "Session Lifecycle"
+description: "Learn how to use bzm.py's sync and audit commands to mirror your vault to Google Drive and keep it healthy across every work session."
+---
+
+Every Baza work session follows a simple rhythm managed by `bzm.py`, the Baza Command Manager: sync your vault to Google Drive when you want your latest notes available across devices, and run a periodic audit to keep the vault clean. Whether you trigger these commands from a terminal, an Obsidian hotkey, or a clickable dashboard button, the result is the same: a clean, conflict-free, multi-device knowledge base every time you sit down to work.
+
+## The Two Commands
+
+<CardGroup cols={2}>
+  <Card title="sync" icon="rotate-cw" color="#3b82f6">
+    Mirrors your entire vault to Google Drive using a one-way directory sync. Run this any time you want your latest notes available on mobile or another machine.
+  </Card>
+  <Card title="audit" icon="search" color="#8b5cf6">
+    Scans your vault for duplicate files (by SHA-256 hash) and broken internal links, then writes a report to `99-System/Logs/VAULT_AUDIT_REPORT.md`.
+  </Card>
+</CardGroup>
+
+## Syncing Your Vault to Google Drive
+
+Run the `sync` command any time you want your vault mirrored to Google Drive — after a writing session, before switching to a mobile device, or whenever you finish a meaningful chunk of work.
+
+```bash
+python bzm.py sync
+```
+
+**What happens:**
+- Your vault folder is mirrored to your configured Google Drive destination using `robocopy` (Windows) or an equivalent sync tool
+- Excluded directories (`.git`, `.obsidian`, `98-Cold-Archive`, etc.) are not copied, keeping the mirror lightweight
+- A success or warning message confirms the result
+
+```cmd
+robocopy "<your-vault-path>" "<your-google-drive>/baza-mirror" /MIR /XD .git .github .venv node_modules dist .smart-env .obsidian 98-Cold-Archive /R:1 /W:1
+```
+
+<Warning>
+  **Windows-only:** `robocopy` is a Windows built-in tool. If you're on macOS or Linux, replace the `sync()` function in `bzm.py` with an equivalent command such as `rsync -av --delete --exclude='.git' <source>/ <destination>/`.
+</Warning>
+
+<Tip>
+  Sync before switching tasks or stepping away from your desk. Your Google Drive mirror stays current, so you can read your latest notes on mobile without waiting for a manual copy.
+</Tip>
+
+---
+
+## Running a Vault Audit
+
+Run the `audit` command periodically — weekly or whenever your vault feels sluggish or disorganized — to catch duplicate files and broken internal links before they accumulate.
+
+```bash
+python bzm.py audit
+```
+
+**What happens:**
+1. Walks every `.md` file in your vault (skipping excluded directories)
+2. Computes a SHA-256 hash for each file larger than 100 bytes
+3. Groups files with identical hashes and reports them as duplicate sets
+4. Writes a full report to `99-System/Logs/VAULT_AUDIT_REPORT.md`
+
+<Tip>
+  Run `python bzm.py audit` after a large import or a long week of capturing to catch duplicates early. Open `99-System/Logs/VAULT_AUDIT_REPORT.md` to review the findings and manually delete or merge the flagged files.
+</Tip>
+
+---
+
+## Trigger Methods
+
+You have three ways to run the sync and audit commands. Use whichever fits your flow — they all call the same `bzm.py` logic.
+
+### Option 1: Terminal
+
+Open a terminal in your vault root and run the commands directly:
+
+```bash
+python bzm.py sync
+python bzm.py audit
+```
+
+### Option 2: Obsidian Hotkeys (Shell Commands Plugin)
+
+Install the **Shell Commands** community plugin, then register the two commands and bind them to hotkeys in Obsidian's **Settings → Hotkeys**.
+
+| Command | Shell Command | Suggested Hotkey |
+|---|---|---|
+| Baza: Sync to Google Drive | `python "<your-vault-path>/99-System/Scripts/bzm.py" sync` | `Ctrl + Alt + S` |
+| Baza: Vault Audit | `python "<your-vault-path>/99-System/Scripts/bzm.py" audit` | `Ctrl + Alt + A` |
+
+Replace `<your-vault-path>` with the absolute path to your vault on your machine (for example, on Windows: `C:\Users\YourName\Documents\baza`).
+
+<Info>
+  Hotkey bindings give you muscle-memory control over vault maintenance without leaving the keyboard. Once configured, syncing to Google Drive is a single chord away.
+</Info>
+
+### Option 3: Meta-Bind Dashboard Buttons
+
+Install the **Meta-Bind** community plugin to embed clickable buttons directly on your `BAZA_STATUS_DASHBOARD` note. Copy and paste each block into your dashboard:
+
+```meta-bind-button
+style: primary
+id: baza-sync
+label: "🔄 Sync to Google Drive"
+icon: refresh-cw
+color: blue
+action:
+  type: command
+  command: shell-commands:execute-baza-sync
+```
+
+```meta-bind-button
+style: primary
+id: baza-audit
+label: "🕵️ Vault Audit"
+icon: search
+color: purple
+action:
+  type: command
+  command: shell-commands:execute-baza-audit
+```
+
+<Note>
+  The Meta-Bind buttons call the same Shell Commands plugin commands as the hotkeys. You must have the Shell Commands plugin installed and configured before the buttons will work.
+</Note>
+
+---
+
+## What Gets Synced and What Doesn't
+
+The Google Drive mirror uses strategic exclusions to keep your mobile viewport lightweight and prevent file-locking conflicts:
+
+| Included in Mirror | Excluded from Mirror |
+|---|---|
+| All `.md` notes | `.git` and `.github` (prevents Git engine conflicts) |
+| `baza_manifest.json` | `.obsidian` (prevents UI cache sync loops) |
+| `00-Inbox` | `98-Cold-Archive` (too large; kept local-only) |
+| `02-Library` | `.venv`, `node_modules`, `dist` |
+| `99-System` scripts and schemas | `.smart-env` |
+
+---
+
+## Configuring bzm.py for Your Vault
+
+Before running either command, open `bzm.py` and set two variables near the top of the file to match your local setup:
+
+```python
+# Path to your local Baza vault
+VAULT_DIR = r"<your-vault-path>"
+
+# Path to your Google Drive mirror destination
+MIRROR_DIR = r"<your-google-drive>/baza-mirror"
+```
+
+Save the file, then run `python bzm.py sync` to confirm the mirror works correctly.
+
+---
+
+## Plugin Requirements
+
+| Plugin | Purpose | Where to Install |
+|---|---|---|
+| Shell Commands | Execute `bzm.py` from Obsidian | Obsidian → Community Plugins |
+| Meta-Bind | Clickable dashboard buttons | Obsidian → Community Plugins |
+| Commander *(optional)* | Ribbon toolbar and status bar icons for one-click sync | Obsidian → Community Plugins |

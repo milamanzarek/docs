@@ -1,0 +1,155 @@
+---
+title: "Voice Notes: 2-Tap Capture to Structured Knowledge"
+sidebarTitle: "Voice Notes"
+description: "Capture ideas with Apple Voice Memos and the Process Voice Inbound iOS Shortcut — Baza automatically transcribes, formats, and routes them to your vault."
+---
+
+When an idea surfaces while you're moving, commuting, or away from your desk, you shouldn't have to wait until you're back at your keyboard to capture it. Baza's voice notes workflow lets you speak freely into Apple Voice Memos and reach your vault in exactly two taps — no manual transcription, no copy-pasting, and no raw stream-of-consciousness text polluting your knowledge base. The cloud pipeline handles punctuation, paragraph breaks, YAML frontmatter, and routing automatically, so the note that lands in your vault is already structured and ready for integration.
+
+## How It Works: The Full Pipeline
+
+```
+Apple Voice Memos
+      ↓  (tap Share → Process Voice Inbound)
+iOS Shortcut → HTTPS POST
+      ↓
+Secure Cloud Webhook
+      ↓
+Stage 1: Syntactic Formatting (OpenRouter / GCP API)
+      ↓
+Stage 2: YAML Ingestion Engine (classification + routing)
+      ↓
+VOICE_INBOX (staging folder, adjacent to Baza vault)
+      ↓
+Git Staging & Validation (staging-agent branch)
+      ↓
+User Sovereign Review → routed to correct storage zone
+```
+
+---
+
+## The 2-Tap Process
+
+<Steps>
+  <Step title="Record in Apple Voice Memos">
+    Open the native **Apple Voice Memos** app and record your thought, idea, or reflection. Speak naturally — don't worry about pausing for punctuation or organizing your thoughts into paragraphs. The pipeline's job is to turn your raw speech into clean prose.
+
+    <Tip>
+      Speak in complete sentences and pause briefly between distinct topics. The YAML Ingestion Engine detects topic shifts to decide whether to file your memo as a single note or split it into multiple separate notes — clear pauses help it make the right call.
+    </Tip>
+  </Step>
+
+  <Step title="Share via the Process Voice Inbound shortcut">
+    When you finish recording, tap the **transcript view** to open the auto-generated Apple transcription. Then tap the **Share Sheet** icon and select the pinned shortcut **"Process Voice Inbound"**.
+
+    That's the second and final tap from you. The shortcut extracts the raw transcript and sends it via HTTPS POST to the secure cloud webhook. The rest of the pipeline runs automatically.
+
+    <Info>
+      Apple generates the transcription on-device using its built-in speech recognition — no audio file is uploaded to the cloud. Only the text transcript travels to the Baza webhook, keeping your voice recordings private.
+    </Info>
+  </Step>
+
+  <Step title="Stage 1 — Syntactic Formatting runs in the cloud">
+    The cloud webhook receives your raw, unpunctuated transcript and passes it to the **Syntactic Formatter**, powered by the OpenRouter or GCP API.
+
+    The formatter:
+    - Adds punctuation, sentence breaks, and paragraph structure
+    - Converts stream-of-consciousness phrasing into coherent prose
+    - Preserves your meaning without editorializing or summarizing
+
+    You don't need to do anything during this stage. The output is clean, readable text that's ready for metadata generation.
+  </Step>
+
+  <Step title="Stage 2 — YAML Ingestion Engine classifies and routes">
+    The formatted text passes to the **YAML Ingestion Engine**, which:
+
+    1. Generates standardized YAML frontmatter for the note
+    2. Detects whether the memo covers one topic or multiple topics
+    3. Splits multi-topic memos into separate `.md` files, each with its own frontmatter and classification
+    4. Determines the correct routing destination based on content type
+
+    Every processed voice note receives at minimum this frontmatter:
+
+    ```yaml
+    ---
+    title: 
+    status: draft
+    type: voice-note
+    classification: 
+    protocol_id: BAZA-VOICE-[timestamp]
+    created: 
+    source: apple-voice-memos
+    voice_memo_id: 
+    tags:
+      - voice-note
+      - inbox
+    ---
+    ```
+  </Step>
+
+  <Step title="Your note lands in VOICE_INBOX for review">
+    The processed `.md` file lands in the **`VOICE_INBOX`** folder — a staging area adjacent to your active Baza vault, not inside it. This keeps raw drafts out of your main knowledge base until you've reviewed them.
+
+    From `VOICE_INBOX`, the Git staging workflow pushes the file to the `staging-agent` branch for validation. Validation checks:
+    - All required frontmatter fields are present
+    - Classification follows the 4-letter taxonomy
+    - No Git conflicts with existing notes
+    - Topic splitting produced distinct, non-duplicate titles
+
+    If validation passes, the note moves to **User Sovereign Review**. If it fails, you'll see a flag in your dashboard to fix it manually.
+  </Step>
+
+  <Step title="Review and route to the right storage zone">
+    After validation, you make the final call on where the note belongs. Change `status: draft` to `status: active` and move the file to the appropriate location:
+
+    | Content type | Routing destination |
+    |---|---|
+    | Strategic insight, protocol, or architecture decision | Active Baza vault (`02-Library`) |
+    | Session reflection or personal log | `CHERDAK` |
+    | Very large voice export (>60 MB) | `CHERDAK_RAW` |
+    | Long-term archival material | GCP Cloud Storage |
+
+    <Note>
+      No agent writes directly into your active Baza vault from a voice note. All changes go through Git staging and your sovereign review first. You always have the final word on what enters the knowledge graph.
+    </Note>
+  </Step>
+</Steps>
+
+---
+
+## Getting Clean Transcriptions
+
+Apple's on-device transcription is accurate but benefits from good recording conditions. Follow these practices to minimize cleanup work:
+
+<CardGroup cols={2}>
+  <Card title="Speak close to the microphone" icon="microphone">
+    Hold your iPhone 15–20 cm from your mouth and speak at a normal conversational volume. Distance and background noise are the two biggest causes of transcription errors.
+  </Card>
+  <Card title="Pause between topics" icon="pause">
+    If your memo covers multiple subjects, pause for 1–2 seconds between them. This gives the YAML Ingestion Engine a clear signal to split the memo into separate notes rather than merging unrelated ideas.
+  </Card>
+  <Card title="Dictate proper nouns clearly" icon="text-cursor">
+    Spell out unfamiliar names, acronyms, or technical terms if they're critical to meaning. You can also add clarifying context immediately after: "The BAZA system, B-A-Z-A."
+  </Card>
+  <Card title="Keep memos focused" icon="crosshair">
+    The pipeline handles multi-topic memos, but shorter, single-topic recordings produce the cleanest results. Aim for one main idea per recording when possible.
+  </Card>
+</CardGroup>
+
+---
+
+## Failure Conditions and Manual Review
+
+The pipeline flags notes for manual review when it encounters problems it can't resolve automatically:
+
+<Warning>
+  If any of the following occur, you'll see a flag in your dashboard. Open the note in `VOICE_INBOX`, fix the issue described in the flag, and re-run the staging validation.
+</Warning>
+
+| Failure condition | What to check |
+|---|---|
+| Incoherent formatting output | Review the raw transcript; the audio may have been unclear |
+| Topic splitting created duplicate titles | Manually rename or merge the split files |
+| Missing required frontmatter fields | Add the missing fields (see the frontmatter standard above) |
+| Classification violates the 4-letter taxonomy | Update the `classification` field to match your approved list |
+| Git conflict during staging | Resolve the conflict in the `staging-agent` branch before merging |

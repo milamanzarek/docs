@@ -1,0 +1,80 @@
+---
+title: "Baza Knowledge Base"
+description: "Your AI-powered personal knowledge management system built on the Dual-Interface Architecture."
+mode: custom
+---
+
+<div className="mx-auto flex w-full max-w-[720px] flex-col gap-12 px-4 py-10 lg:gap-14 lg:py-16">
+  <div className="flex flex-col items-center gap-6">
+    <div className="flex max-w-[480px] flex-col gap-2 text-center">
+      <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">
+        Welcome to Baza
+      </h1>
+      <p className="text-balance text-base text-gray-600 dark:text-gray-400">
+        Baza is your AI-powered knowledge operating system. Drop notes in the Inbox, let your agent swarm process and connect them, and find anything in seconds. Use the tabs above to explore or search with <kbd>⌘</kbd> <kbd>K</kbd>.
+      </p>
+    </div>
+  </div>
+
+  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+    <a
+      href="/quickstart"
+      className="group flex flex-col outline-none"
+    >
+      <div
+        className="kb-feature-card relative flex h-[170px] items-center justify-center overflow-hidden rounded-2xl ring-1 ring-gray-100 transition group-hover:ring-gray-200 dark:ring-white/[0.08] dark:group-hover:ring-white/15 saturate-50 group-hover:saturate-100"
+      >
+        <div className="relative flex items-center justify-center">
+          <Icon icon="rocket" size={36} className="!bg-white" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1 pt-4">
+        <span className="text-base font-medium text-gray-900 dark:text-gray-50">Quick Start</span>
+        <span className="text-sm leading-5 text-gray-600 dark:text-gray-400">
+          Set up your Baza vault, install required tools, and capture your first note in under 10 minutes.
+        </span>
+      </div>
+    </a>
+
+    <a
+      href="/agents/overview"
+      className="group flex flex-col outline-none"
+    >
+      <div
+        className="kb-feature-card relative flex h-[170px] items-center justify-center overflow-hidden rounded-2xl ring-1 ring-gray-100 transition group-hover:ring-gray-200 dark:ring-white/[0.08] dark:group-hover:ring-white/15 saturate-50 group-hover:saturate-100"
+      >
+        <div className="relative flex items-center justify-center">
+          <Icon icon="bot" size={36} className="!bg-white" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1 pt-4">
+        <span className="text-base font-medium text-gray-900 dark:text-gray-50">AI Agent Swarm</span>
+        <span className="text-sm leading-5 text-gray-600 dark:text-gray-400">
+          Meet the named agents that process your inbox, build your knowledge graph, and keep your vault clean.
+        </span>
+      </div>
+    </a>
+  </div>
+
+  <div className="flex flex-col gap-4">
+    <h2 className="text-lg font-medium tracking-tight text-gray-900 dark:text-gray-50">Explore Baza</h2>
+
+    <Columns cols={2}>
+      <Card title="Vault Structure" icon="folder-open" iconType="light" href="/vault/overview">
+        Inbox, Library, and System layers — how your vault is organized for humans and agents alike.
+      </Card>
+      <Card title="Workflows" icon="workflow" iconType="light" href="/workflows/session-lifecycle">
+        Session lifecycle, voice notes pipeline, inbox processing, and content routing workflows.
+      </Card>
+    </Columns>
+
+    <Columns cols={2}>
+      <Card title="Automation & Sync" icon="refresh-cw" iconType="light" href="/automation/bzm-cli">
+        bzm CLI commands, Google Drive mirroring, nightly maintenance, and vector search integration.
+      </Card>
+      <Card title="Reference" icon="book-open" iconType="light" href="/reference/tagging-taxonomy">
+        Tagging taxonomy, metadata schema, knowledge graph relationships, and troubleshooting.
+      </Card>
+    </Columns>
+  </div>
+</div>

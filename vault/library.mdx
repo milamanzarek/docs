@@ -1,0 +1,132 @@
+---
+title: "Baza Library: Curated Thematic Knowledge Collections"
+sidebarTitle: "Library"
+description: "The 02-Library folder organizes your processed knowledge into thematic collections, each suffixed with your initial for easy multi-user scaling."
+---
+
+The `02-Library/` folder is where your knowledge lives after it has been processed. Every note that passes through the Inbox gets refined by agents and filed here into one of your thematic Knowledge folders. The Library is the heart of your semantic memory — the layer where raw observations become structured, cross-linked, searchable facts.
+
+## How the Library Is Organized
+
+Each subfolder in `02-Library/` follows the `[Topic]_[Initial]` naming convention. The single-letter suffix is your user initial — it visually distinguishes your Library folders from other directories at a glance, and makes the vault easy to scale when additional users join the system (e.g., `Consulting_K` for one user, `Consulting_M` for another).
+
+Folder names use a single, intuitive word for the theme:
+
+```
+02-Library/
+├── Author_K/
+├── Automation_K/
+├── Consulting_K/
+├── Documents_K/
+├── Fencing_K/
+├── Personal_Brand_and_Content_K/
+├── Personal_K/
+├── Portfolio_K/
+├── Volunteering_K/
+└── Resources/          ← Resource Pointers for heavy files
+```
+
+<Info>
+  You do not create or rename these folders manually. Agents create new `[Topic]_K` folders as your knowledge base grows and new themes emerge from your notes.
+</Info>
+
+## What Lives in Each Folder
+
+Here is a breakdown of the Knowledge folders in a typical Baza vault and the content types you will find inside each one:
+
+| Folder | Content types |
+|---|---|
+| `Author_K` | Writing projects, publishing research, manuscript notes, author profiles |
+| `Automation_K` | Workflow designs, tool evaluations, integration research, API notes |
+| `Consulting_K` | Client engagements, strategy notes, proposals, meeting summaries |
+| `Documents_K` | Processed documents, reports, and structured reference material |
+| `Fencing_K` | Training logs, competition notes, coaching resources, technique research |
+| `Personal_Brand_and_Content_K` | Content strategy, social media plans, brand assets, editorial calendars |
+| `Personal_K` | Personal growth notes, journaling, reflections, life planning |
+| `Portfolio_K` | Case studies, project showcases, credentials, achievement records |
+| `Volunteering_K` | Committee work, NGO involvement, event coordination notes |
+
+## How Agents File Notes to the Library
+
+When an agent processes a note from your Inbox, it does more than move a file — it transforms it. Here is what happens before the note lands in a Library folder:
+
+1. **Entity extraction** — The agent identifies and structures people, projects, organizations, dates, and concepts from the raw text into YAML frontmatter.
+2. **Confidence scoring** — Each fact receives a confidence score between `0.0` and `1.0` based on source quality and corroboration. Scores strengthen with reinforcement and decay if a fact goes unverified.
+3. **Typed graph linking** — The agent connects the note to related nodes using semantic relationship types instead of flat wikilinks:
+
+```markdown
+[member_of:: [[Consulting_K]]]
+[relates_to:: [[Q3_Strategy_Project]]]
+[mentioned_by:: [[Sarah_Chen]]]
+```
+
+4. **Supersession (not deletion)** — If a new note contradicts an existing fact, the agent does not delete the old note. It marks the old node as superseded and lowers its confidence score, preserving your knowledge history.
+
+## The Resource Pointer Pattern
+
+Your vault is designed to stay lightweight — only markdown files, JSON, and CSVs live inside Obsidian. Heavy assets (PDFs, videos, images, large exports) go to external storage, and agents create a **Resource Pointer** note in `02-Library/Resources/` in their place.
+
+A Resource Pointer looks like this:
+
+```markdown
+---
+type: resource_pointer
+format: pdf
+size_mb: 14.2
+confidence: 1.0
+external_url: https://drive.google.com/file/d/XXXX
+last_verified: 2026-05-23
+---
+
+# Q3 Consulting Proposal — Final Draft
+
+**Description:** Final proposal delivered to client on June 1, 2026.
+**Stored in:** Google Drive → your-vault-mirror/Consulting/
+**Topics:** #topic/consulting #type/resource
+
+[member_of:: [[Consulting_K]]]
+[relates_to:: [[Q3_Strategy_Project]]]
+```
+
+This keeps your vault fast and your Obsidian graph uncluttered. To hide all resource pointers from your Graph View, paste this into the **Filter** field in your Graph settings:
+
+```
+-path:"02-Library/Resources"
+```
+
+## Browsing and Searching Your Library
+
+### In Obsidian
+
+- **Folder navigation:** Open any `[Topic]_K` folder in the file explorer to browse notes by theme.
+- **Graph View:** Your Library becomes a visual knowledge graph. Use color-coding rules to distinguish content types at a glance — green for active projects, blue for meeting notes, grey for archived items.
+- **Search:** Use Obsidian's built-in search with tag filters (e.g., `#topic/consulting #status/active`) to narrow results across the whole Library.
+
+### Dataview Queries
+
+Because agents write consistent YAML frontmatter to every processed note, you can query your Library using Dataview. For example, to list all active consulting notes:
+
+````markdown
+```dataview
+TABLE file.mtime AS "Last Updated", status
+FROM "02-Library/Consulting_K"
+WHERE status = "active"
+SORT file.mtime DESC
+```
+````
+
+### On Mobile
+
+Your Library automatically mirrors to Google Drive via `99-System/Scripts/bzm.py`, making it readable through the Gemini app on your phone. Run a manual sync any time you need the latest version:
+
+```powershell
+python 99-System/Scripts/bzm.py sync
+```
+
+<Tip>
+  If you want to manually add a note directly to a Library folder (bypassing the Inbox), you can — but include the relevant YAML frontmatter and tags so the agents can link it into the graph correctly on their next maintenance pass.
+</Tip>
+
+<Note>
+  As your vault grows, the Library accumulates thousands of linked entities across all Knowledge folders. Nightly maintenance scripts run automatically to check for broken links, duplicate nodes, and graph health, keeping your Library clean without any manual effort.
+</Note>

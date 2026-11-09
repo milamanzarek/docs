@@ -1,0 +1,264 @@
+---
+title: "Vector Search: Semantic Retrieval with Chroma DB Archive"
+sidebarTitle: "Vector Search"
+description: "Baza uses Chroma DB to give your AI agents semantic search across your entire knowledge archive, including multilingual and historically dated content."
+---
+
+Baza's vector search layer gives your AI agents the ability to find notes by meaning rather than by exact keyword matches. Instead of searching for the literal string "brand strategy," an agent can query your archive for the concept of brand positioning and surface relevant notes written years apart, in multiple languages, across platforms you used before Obsidian existed. This capability is built on Chroma DB and a carefully designed ingestion schema called **BAZA-PRTCL-003**.
+
+<Note>
+The vector search setup described here applies to the local Chroma DB prototype used for archive ingestion experiments. The long-term canonical memory layer for Baza is GCP Cloud Storage with a cloud-native retrieval pipeline. Chroma DB remains the active tool for offline prototyping, local retrieval tests, and migration validation workflows.
+</Note>
+
+---
+
+## The Collection: `baza_secret_sauce`
+
+All personal archive content is ingested into a single Chroma DB collection named `baza_secret_sauce`. This collection holds your 12-year personal knowledge archive — notes from Evernote, Notion, old journals, and academic research — in a format that agents can query semantically with metadata filters.
+
+The collection uses **cosine similarity** (`hnsw:space: cosine`) as its distance metric, which works well for multilingual embeddings where the absolute magnitude of embedding vectors matters less than their directional similarity.
+
+```python
+import chromadb
+from chromadb.config import Settings
+
+client = chromadb.HttpClient(
+    host="127.0.0.1",
+    port=8000,
+    settings=Settings(allow_reset=True)
+)
+
+collection = client.get_or_create_collection(
+    name="baza_secret_sauce",
+    metadata={"hnsw:space": "cosine"}
+)
+```
+
+---
+
+## Chunking Strategy
+
+Long documents are split into overlapping chunks before ingestion. The chunking parameters are tuned for the mixed nature of the archive — some notes are short journal entries, others are multi-page academic papers.
+
+| Parameter | Value | Why |
+|---|---|---|
+| Chunk size | 1000 characters (~150–200 words) | Balances semantic coherence with retrieval precision |
+| Chunk overlap | 150 characters (~25–30 words) | Prevents key ideas from being cut off at chunk boundaries |
+| Separators (priority order) | `\n\n` → `\n` → ` ` → `""` | Splits on paragraph breaks first, then sentence breaks, then word breaks — preserves semantic units |
+| Language support | Russian + English (bilingual) | Russian paragraphs are never broken mid-word |
+
+The separator priority list means the splitter always tries to cut at the most natural boundary available. A paragraph break is used if one exists in the window; if not, it falls back to a sentence break, then a word break, and only splits mid-word as a last resort.
+
+---
+
+## Metadata Schema
+
+Every chunk you ingest must include a full set of metadata fields. These fields are what make the collection filterable — without them, you can only do unfiltered semantic search across the entire archive, which makes it impossible for agents to scope queries to a specific time period, language, or knowledge category.
+
+| Field | Type | Description | Example |
+|---|---|---|---|
+| `source_platform` | string | The original app or platform where the note was created | `"evernote"`, `"notion"`, `"journal"`, `"gdrive"` |
+| `original_date` | string | ISO 8601 creation date of the source note | `"2014-08-15"` |
+| `original_title` | string | Title of the original source note | `"Fencing Coaching Methodology Notes"` |
+| `language` | string | Dominant language of the chunk | `"en"`, `"ru"`, `"bilingual"` |
+| `category` | string | Primary knowledge category | `"fencing"`, `"academic"`, `"personal"`, `"consulting"` |
+| `tags` | string | Comma-separated extracted tags | `"coaching, epee, footwork"` |
+| `file_path_pointer` | string | Relative path to the pointer note in Baza (if one exists) | `"02-Library/wiki/Fencing_Coaching_Archive_PTR.md"` |
+
+<Info>
+Chroma DB requires all metadata values to be strings. The `tags` field is stored as a comma-separated string even though tags are conceptually a list. The `prepare_metadata()` method in the ingestion engine handles this conversion automatically.
+</Info>
+
+---
+
+## Ingestion Engine
+
+The `ArchiveIngestionEngine` class is the standard way to ingest documents into `baza_secret_sauce`. It handles client initialization, metadata sanitization, and upsert operations in one place.
+
+```python
+import chromadb
+from chromadb.config import Settings
+from datetime import datetime
+
+class ArchiveIngestionEngine:
+    def __init__(self, host="127.0.0.1", port=8000):
+        self.client = chromadb.HttpClient(
+            host=host,
+            port=port,
+            settings=Settings(allow_reset=True)
+        )
+        # Target the multilingual, high-value IP collection
+        self.collection = self.client.get_or_create_collection(
+            name="baza_secret_sauce",
+            metadata={"hnsw:space": "cosine"}  # Use cosine similarity for multilingual embeddings
+        )
+
+    def prepare_metadata(self, raw_meta: dict) -> dict:
+        """
+        Validates and sanitizes raw metadata keys to match BAZA-PRTCL-003.
+        """
+        return {
+            "source_platform": str(raw_meta.get("source_platform", "unknown")),
+            "original_date": str(raw_meta.get("original_date", datetime.now().strftime("%Y-%m-%d"))),
+            "original_title": str(raw_meta.get("original_title", "Untitled Archive Note")),
+            "language": str(raw_meta.get("language", "en")),
+            "category": str(raw_meta.get("category", "general")),
+            "tags": ", ".join(raw_meta.get("tags", [])),
+            "file_path_pointer": str(raw_meta.get("file_path_pointer", ""))
+        }
+
+    def ingest_document(self, doc_id: str, text_chunk: str, raw_meta: dict):
+        """
+        Upserts a single text chunk with standardized metadata.
+        """
+        sanitized_meta = self.prepare_metadata(raw_meta)
+        self.collection.upsert(
+            ids=[doc_id],
+            documents=[text_chunk],
+            metadatas=[sanitized_meta]
+        )
+```
+
+**To ingest a document**, instantiate the engine and call `ingest_document()` once per chunk:
+
+```python
+engine = ArchiveIngestionEngine()
+
+engine.ingest_document(
+    doc_id="evernote-fencing-2014-08-15-chunk-001",
+    text_chunk="Методика обучения фехтованию на шпагах. Основные принципы...",
+    raw_meta={
+        "source_platform": "evernote",
+        "original_date": "2014-08-15",
+        "original_title": "Fencing Coaching Methodology Notes",
+        "language": "ru",
+        "category": "fencing",
+        "tags": ["coaching", "epee", "footwork"],
+        "file_path_pointer": "02-Library/wiki/Fencing_Coaching_Archive_PTR.md"
+    }
+)
+```
+
+<Tip>
+Use `upsert` (not `add`) in your ingestion scripts. If you re-run an ingestion over the same source files, upsert will update existing chunks rather than throwing a duplicate ID error, making your ingestion pipeline idempotent.
+</Tip>
+
+---
+
+## Querying with Metadata Filters
+
+Chroma DB supports compound `where` clauses using `$and`, `$eq`, and `$gte` operators. Use these to scope your semantic queries to a specific subset of the archive.
+
+### Query academic research from 2018 onward
+
+```python
+results = collection.query(
+    query_texts=["brand positioning models"],
+    n_results=5,
+    where={
+        "$and": [
+            {"category": {"$eq": "academic"}},
+            {"original_date": {"$gte": "2018-01-01"}}
+        ]
+    }
+)
+```
+
+### Query Russian fencing notes from Evernote
+
+```python
+results = collection.query(
+    query_texts=["методика обучения фехтованию на шпагах"],
+    n_results=5,
+    where={
+        "$and": [
+            {"source_platform": {"$eq": "evernote"}},
+            {"category": {"$eq": "fencing"}},
+            {"language": {"$eq": "ru"}}
+        ]
+    }
+)
+```
+
+### Query all consulting notes regardless of language
+
+```python
+results = collection.query(
+    query_texts=["client strategy frameworks"],
+    n_results=10,
+    where={"category": {"$eq": "consulting"}}
+)
+```
+
+**Filter operators available:**
+
+| Operator | Usage | Example |
+|---|---|---|
+| `$eq` | Exact match on a string field | `{"language": {"$eq": "ru"}}` |
+| `$gte` | Greater than or equal — works on ISO date strings | `{"original_date": {"$gte": "2018-01-01"}}` |
+| `$and` | Combine multiple conditions — all must be true | `{"$and": [{...}, {...}]}` |
+
+---
+
+## Multilingual Support
+
+The `baza_secret_sauce` collection is designed for bilingual Russian-English content. A few things to keep in mind when working with multilingual archives:
+
+<CardGroup cols={2}>
+  <Card title="Query in the language of the notes" icon="language">
+    When you know a subset of your archive is in Russian, write your `query_texts` in Russian. Cosine similarity works best when the query embedding and document embeddings are in the same language space.
+  </Card>
+  <Card title="Use the language field to filter" icon="filter">
+    Set `{"language": {"$eq": "ru"}}` in your `where` clause to restrict results to Russian notes, or `"bilingual"` for notes that mix both languages within a single chunk.
+  </Card>
+  <Card title="Paragraph-aware chunking" icon="scissors">
+    The `\n\n` → `\n` separator priority means Russian paragraphs are never split mid-word. A word-boundary split only happens when no other boundary exists in the chunk window.
+  </Card>
+  <Card title="Tag and categorize consistently" icon="tags">
+    Use the same category and tag vocabulary across both languages. Agents filtering by `{"category": {"$eq": "fencing"}}` retrieve both Russian and English fencing notes in a single query.
+  </Card>
+</CardGroup>
+
+---
+
+## Ingestion Roadmap
+
+If you're building out the vector archive from scratch, follow this sequence:
+
+<Steps>
+
+<Step title="Pilot batch">
+Ingest a small subset first — for example, 50 selected Evernote notes from one category. Run test queries and review whether the retrieved results are semantically relevant before ingesting the full archive.
+</Step>
+
+<Step title="Metadata enrichment">
+For raw exports (Evernote XML, Notion HTML), use a lightweight LLM to auto-generate the `category` and `tags` fields before chunking. This saves significant manual effort across thousands of historical notes.
+</Step>
+
+<Step title="Create Baza pointer notes">
+For every heavy document ingested into Chroma DB, create a lightweight Markdown pointer note in `02-Library/` containing the document's metadata and its Chroma DB chunk IDs. This lets you discover ingested content directly from Obsidian without running a query.
+
+```markdown
+---
+type: archive-pointer
+source_platform: evernote
+original_date: 2014-08-15
+language: ru
+category: fencing
+chroma_collection: baza_secret_sauce
+chroma_chunk_prefix: evernote-fencing-2014-08-15
+---
+
+# Fencing Coaching Methodology Notes (Archive Pointer)
+
+This note is a pointer to the vector-indexed version of the original
+Evernote export. Query the `baza_secret_sauce` collection with 
+`category: fencing` and `language: ru` to retrieve the full content.
+```
+</Step>
+
+<Step title="Scale to the full 12-year archive">
+Once your pilot validates query quality and metadata consistency, run the full ingestion pipeline across all source platforms: Evernote exports, Notion exports, old journals, and academic notes.
+</Step>
+
+</Steps>

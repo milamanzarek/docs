@@ -1,0 +1,96 @@
+---
+title: "Baza AI Agent Swarm: How the System Works Together"
+sidebarTitle: "Overview"
+description: "Baza's agent swarm processes your notes, maintains the knowledge graph, and keeps the vault healthy — each agent has a distinct role and environment."
+---
+
+Baza doesn't rely on a single AI assistant — it runs a coordinated **swarm** of specialized agents, each operating in their own environment, each focused on a different slice of your knowledge system. Antigravity orchestrates strategy from the chat UI, Podruga handles heavy CLI operations, The Librarian tends the Obsidian vault, and The Archivist digs through legacy archives. Together they keep your PKM alive, consistent, and growing — without you having to manually manage every step.
+
+## The Agent Amnesia Problem
+
+Every AI agent starts each session with a blank slate. Claude doesn't know what Gemini did yesterday. Copilot doesn't know what Antigravity decided last week. Without a shared memory system, you get **context drift** — agents contradict each other, repeat work that's already been done, or make decisions based on outdated information.
+
+<Warning>
+  Agent Amnesia is the default state of every AI tool. If you don't explicitly solve it, each agent operates as if it's the only one that has ever touched your vault.
+</Warning>
+
+Baza solves this through two interlocking mechanisms:
+
+1. **Shared Markdown files** — agents read from and write to the same vault. Every decision, session log, and extracted fact lands in a structured `.md` file that any other agent can read in the next session.
+2. **The Universal Tether Rule** — every agent is anchored to the same master protocol before it does anything else.
+
+## The Universal Tether Rule
+
+Every agent operating in a project directory must have a local, lightweight configuration file at the project root. This file does one thing: it tells the agent to read the master protocol (`GLOBAL_RULES.md`) before taking any action.
+
+```text
+CRITICAL INSTRUCTION: Before taking any actions, you MUST read the master
+protocol at: CORE_OS/00_CORE_PROTOCOLS/GLOBAL_RULES.md
+
+LOGGING MANDATE: All session logs, insights, and decisions MUST be written
+to CORE_OS/05_LOGS/ using the specific commands defined in GLOBAL_RULES.md.
+```
+
+<Note>
+  Each agent platform reads a different config file by convention — Claude reads `.clauderules` (or `CLAUDE.md`), Gemini reads `GEMINI.md`, Copilot reads `.github/copilot-instructions.md` — but they all point to the same master protocol. The file name changes; the tether doesn't.
+</Note>
+
+This forces every agent, regardless of its native platform, to sync back to the same source of truth and contribute to the centralized memory before and after every session.
+
+## How Agents Coordinate via Shared Markdown
+
+Agents don't message each other in real time. Instead, they communicate asynchronously through the vault itself — the same way your notes work. When Podruga runs a migration, it writes a session log. When The Archivist finishes an extraction, it updates the knowledge graph. When Antigravity reviews architecture, it checks those logs before making decisions.
+
+This means the vault is not just your notes — it's the **shared working memory of your entire agent team**.
+
+<Info>
+  The Dual-Interface Architecture keeps this readable for you, too. Agents write structured YAML frontmatter and typed relationships that machines can parse; The Librarian translates those into clean, human-readable pages you can actually navigate.
+</Info>
+
+## Agent Types at a Glance
+
+Baza agents fall into four broad categories based on what they do and where they operate.
+
+<CardGroup cols={2}>
+  <Card title="Orchestrators" icon="tower-control">
+    Drive strategy, review architecture, and coordinate other agents. Antigravity and Podruga own this layer — one from the chat UI, one from the CLI.
+  </Card>
+  <Card title="Knowledge Guardians" icon="book-open">
+    Maintain vault health, canonical links, and metadata precision. The Librarian lives here, operating strictly inside Obsidian.
+  </Card>
+  <Card title="Extraction Specialists" icon="microscope">
+    Pull structured knowledge from raw or legacy sources. The Archivist handles forensic extraction, de-duplication, and digital spring cleaning.
+  </Card>
+  <Card title="Code & Inline Assistants" icon="code">
+    Focused tools for specific tasks: code completion (Copilot/Kesha), code review (CodeRabbit/Krolik), inline generation (Codex/Gena), and agentic coding (Cline/Znaika).
+  </Card>
+</CardGroup>
+
+## The Knowledge Flow
+
+When you drop a raw note into `00-Inbox`, here's what the swarm does with it:
+
+1. **Capture** — Your raw note lands in Working Memory (the Inbox).
+2. **Process** — An agent reads it, extracts entities, and compresses it into an Episodic log.
+3. **Consolidate** — Verified facts get promoted to Semantic Memory (Projects, People, Concepts).
+4. **Formalize** — Recurring patterns get crystallized into Procedural Memory (workflows, schemas, rules).
+
+Each step is tracked with a confidence score. Nothing gets silently deleted — when new information contradicts old information, the new data **supersedes** the old with a timestamped link, and the old entry's confidence score drops.
+
+<Tip>
+  You don't need to trigger this flow manually every time. As you configure automation hooks in your vault, the swarm picks up new Inbox items automatically and routes them through the pipeline.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Agent Roster" icon="users" href="/agents/agent-roster">
+    Meet every agent — roles, aliases, environments, and what tasks each one handles.
+  </Card>
+  <Card title="Memory Tiers" icon="layers" href="/agents/memory-tiers">
+    Understand how knowledge matures from raw capture to reliable, cross-session fact.
+  </Card>
+  <Card title="Routing" icon="route" href="/agents/routing">
+    Learn how Baza directs tasks to the right agent using the routing index and aliases.
+  </Card>
+</CardGroup>

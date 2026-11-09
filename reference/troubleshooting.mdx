@@ -1,0 +1,248 @@
+---
+title: "Troubleshooting: Fixing Common Baza Vault Problems"
+sidebarTitle: "Troubleshooting"
+description: "Fix broken links, duplicate notes, sync failures, agent context loss, and other common issues in your Baza vault with these step-by-step solutions."
+---
+
+Most Baza issues fall into a small number of predictable categories — broken graph connections, sync failures, agent confusion, or vault performance degradation. This page walks you through diagnosing and resolving each one. Start with the symptom that matches your situation, follow the steps, and check the Baza Activity Log afterward to confirm the fix was applied correctly.
+
+---
+
+<Accordion title="Broken wikilinks — how to find and fix them">
+
+**Symptom:** Obsidian shows unresolved links (displayed as plain text in red or with a broken icon in the graph), or you see an entry in `broken_links.txt` at your vault root.
+
+**Why it happens:** Broken links appear when a note is renamed, moved, or deleted without updating the references pointing to it. They also appear after bulk imports where the source file names don't match the expected Obsidian note names.
+
+**How to find them:**
+
+Run the built-in audit command from your vault root:
+
+```powershell
+python 99-System/Scripts/bzm.py audit
+```
+
+The audit scans every `.md` file for `[[wikilink]]` patterns, checks each referenced name against the full file index, and writes all unresolved links to `broken_links.txt`.
+
+**How to fix them:**
+
+1. Open `broken_links.txt` and review the list of broken references.
+2. For each broken link, determine whether the target file:
+   - **Was renamed** — update the link to use the new name, or add the old name to the file's `aliases:` frontmatter field.
+   - **Was deleted** — remove the link from the source note or replace it with a note explaining the reference is historical.
+   - **Was never created** — either create the missing node or remove the dangling link.
+3. Re-run `bzm.py audit` to confirm the broken link count reaches zero.
+
+<Tip>
+  Obsidian's built-in **"Update links on rename"** setting (under Settings → Files & Links) prevents most broken links caused by renaming. Enable it if it isn't already on.
+</Tip>
+
+</Accordion>
+
+<Accordion title="Duplicate notes — how the dedupe check finds them">
+
+**Symptom:** You notice two or more notes with nearly identical titles or content, or the audit report flags duplicate SHA-256 hashes.
+
+**Why it happens:** Duplicates commonly appear after bulk imports from Notion, Airtable, or other export sources where the same entity was exported multiple times, or where both a raw inbox note and its processed semantic node coexist without the inbox version being cleaned up.
+
+**How to find them:**
+
+The audit command automatically runs a duplicate detection pass using SHA-256 file hashing:
+
+```powershell
+python 99-System/Scripts/bzm.py audit
+```
+
+Files larger than 100 bytes are hashed and grouped — any group with more than one file sharing the same hash is reported as a duplicate set.
+
+**How to resolve duplicates:**
+
+1. Review the duplicate pairs reported in the audit output.
+2. For each pair:
+   - Identify which file is the **canonical node** (higher `confidence` score, more recent `last_verified`, lives in `02-Library/` rather than `00-Inbox/`).
+   - Check whether either file has typed graph relationships in its Machine Zone that the other lacks — merge those relationships into the canonical node.
+   - Archive or delete the duplicate. If the duplicate has unique content, merge that content into the canonical node first.
+3. Run the audit again to confirm the duplicate count drops to zero.
+
+<Warning>
+  Do not delete a note without first checking whether other notes link to it. Use the audit output or Obsidian's backlink panel to check for incoming links before deleting.
+</Warning>
+
+</Accordion>
+
+<Accordion title="Sync failures — fixing bzm sync errors">
+
+**Symptom:** Running `python 99-System/Scripts/bzm.py sync` produces an error, a robocopy exit code of 8 or higher, or the Google Drive mirror is not updating.
+
+**Why it happens:** Sync failures most commonly occur because the Google Drive destination path is unavailable (Drive not mounted, folder moved) or a file is locked by another process.
+
+**Diagnostic steps:**
+
+1. Verify that `99-System/Scripts/bzm.py` is present and unmodified. The `sync` command requires this file to be in the expected location.
+
+2. Verify the Google Drive destination is mounted and accessible by opening it in your file explorer and confirming the `baza-mirror` folder is present.
+
+3. Check whether the Google Drive app is signed in and fully synced — open Google Drive's desktop app and look for any sync errors or pause indicators.
+
+**How to run a manual sync:**
+
+```powershell
+python 99-System/Scripts/bzm.py sync
+```
+
+Prefer `bzm.py sync` over a raw robocopy command — it uses the full exclusion list (`.venv`, `node_modules`, `.smart-env`, `.gemini`, `98-Cold-Archive`, `__pycache__`) and will not accidentally sync binary indexes to your mirror.
+
+**Robocopy exit codes:**
+
+| Code | Meaning |
+|---|---|
+| 0 | No files copied — destination already in sync |
+| 1–7 | Success with varying levels of file activity |
+| 8+ | One or more files failed to copy — check stderr for details |
+
+</Accordion>
+
+<Accordion title="Agent amnesia — recovering from lost context">
+
+**Symptom:** An agent in a new session has no memory of previous decisions, re-asks questions you've already answered, or makes choices that contradict earlier work.
+
+**Why it happens:** LLM agents have no persistent memory across sessions by default. Baza's solution is the **Universal Tether Rule**: every agent session must begin by reading the key state files that encode current context. If an agent skips this step — or if those files are missing or stale — the session starts without context.
+
+**How to restore agent context:**
+
+Direct the agent to read these files at the start of every session:
+
+1. `Welcome.md` — the system dashboard with current status and active roadmap items.
+2. The current week's Baza Activity Log (e.g., `Baza_Activity_Log_2026_W21.md`) — what happened in recent sessions.
+3. `99-System/Agents/SCHEMA.md` — the entity types, relationship rules, and ingestion protocols.
+4. Any relevant project node from `02-Library/` — the entity node for the project being worked on.
+
+**Preventing amnesia:**
+
+- Always run `:checkpoint` and `:end` macros at session boundaries. These trigger the automated session-end sync and compress the session into an Episodic Memory log entry.
+- Keep the current week's Activity Log up to date — it is the agent's primary source of "what has already been done."
+- Store large session transcripts outside the vault in a separate directory on your machine, not inside the Baza vault folder. Indexing massive transcripts into the Baza graph causes the "Amnesia Loop" where the vault becomes too large to load into context.
+
+<Note>
+  Agent amnesia is a structural property of LLMs, not a bug. The Dual-Interface Architecture is specifically designed to work around it by externalizing state into structured files that agents can reload on demand.
+</Note>
+
+</Accordion>
+
+<Accordion title="Vault performance — speeding up graph and search">
+
+**Symptom:** Obsidian's Graph View is slow or unresponsive, search takes a long time to return results, or the Dataview plugin times out on queries.
+
+**Why it happens:** With 14,000+ entities, Baza's vault is large. The most common cause of graph slowness is the presence of resource pointer nodes — lightweight `.md` files in `02-Library/Resources/` that point to heavy external files. There are thousands of these nodes, and they clutter the graph without adding navigable knowledge.
+
+**Immediate fix — hide resource pointers from the graph:**
+
+In Obsidian, open **Graph View → Filter** and add:
+
+```
+-path:"02-Library/Resources"
+```
+
+This filter hides all resource pointer nodes from the visual graph instantly, without deleting them.
+
+**Keep the vault "Hot":**
+
+Baza uses a **Hybrid Storage** model — heavy assets (PDFs, videos, images) live in external "Cold" storage and are represented in the vault by tiny resource pointer nodes. If heavy files have accumulated inside the vault itself, move them to external storage and replace them with pointers. The vault should contain only `.md`, `.json`, and `.csv` files to maintain performance.
+
+**Additional performance tips:**
+
+- Exclude large directories from Obsidian's file indexer: `98-Cold-Archive`, `.git`, `.venv`.
+- Limit Dataview queries to specific folders using `FROM "02-Library"` rather than scanning the entire vault.
+- Run `bzm.py audit` periodically to find and resolve orphan nodes, broken links, and duplicate files — each of these adds noise to the index.
+
+</Accordion>
+
+<Accordion title="Nightly maintenance not running">
+
+**Symptom:** The Baza Activity Log has not been updated, confidence scores are not decaying, or orphan nodes are accumulating without being flagged.
+
+**Why it happens:** Automated maintenance tasks run at session boundaries (`:checkpoint` and `:end` macros) or via scheduled triggers. If sessions are being closed without running `:end`, or if the session lifecycle macros are misconfigured, maintenance tasks are silently skipped.
+
+**How to check:**
+
+1. Open the current week's Baza Activity Log and check the timestamp of the last entry.
+2. If the last entry is more than a week old, maintenance has not been running.
+
+**How to manually trigger maintenance:**
+
+Run the audit command directly:
+
+```powershell
+python 99-System/Scripts/bzm.py audit
+```
+
+Then run a sync to ensure the mirror is current:
+
+```powershell
+python 99-System/Scripts/bzm.py sync
+```
+
+**How to restore automated maintenance:**
+
+1. Verify that the session lifecycle macros (`:checkpoint`, `:end`) are defined in `Baza_Option_B_Configuration_Baseline.md`.
+2. Confirm that the macros invoke `python 99-System/Scripts/bzm.py sync` to trigger the mirror sync step.
+3. End future sessions with `:end` to ensure the maintenance hooks fire correctly.
+
+</Accordion>
+
+<Accordion title="Inbox notes not being processed">
+
+**Symptom:** Notes you dropped into `00-Inbox/` days ago are still sitting there unprocessed — they haven't been moved to thematic folders or promoted to Semantic Memory.
+
+**Why it happens:** Several conditions can block inbox processing:
+
+1. **Half-baked SUMMARY files** — If a `SUMMARY_*.md` file in the Inbox is missing its `## Web Search (Gemini)` section, agents will skip it intentionally. The ingestion rule requires this section before a summary can be promoted.
+2. **No active agent session** — Baza processes the Inbox during agent sessions, not on a fully automated background schedule. If no session has run recently, notes accumulate.
+3. **Missing or ambiguous tags** — Notes with no hashtags can still be processed, but notes that the agent cannot classify at all may be left in the Inbox pending clarification.
+
+**How to fix:**
+
+1. Check whether any `SUMMARY_*.md` files in `00-Inbox/` are missing the `## Web Search (Gemini)` section. If so, either add the section manually or ask the relevant agent to complete it.
+2. Start a new agent session and explicitly ask the agent to process the Inbox: *"Please process all notes in 00-Inbox/ and file them according to the schema."*
+3. If a note has been sitting unprocessed for more than a week, open it and add at least a `#type/` tag to give the agent a starting classification.
+
+<Tip>
+  Use the templates in `01-Templates/` when creating new Inbox notes. Pre-tagged templates give agents enough context to process notes immediately without guesswork.
+</Tip>
+
+</Accordion>
+
+<Accordion title="Chroma DB connection issues">
+
+**Symptom:** An agent reports it cannot connect to the Chroma vector database, semantic search returns no results, or the `.smart-env` directory appears corrupted.
+
+**Why it happens:** Chroma DB stores the vector embeddings that power semantic search across your vault. Connection failures typically occur because the database process is not running, the `.smart-env` directory is corrupted or was accidentally synced to Google Drive, or the environment variables in `.env` are missing or incorrect.
+
+**Diagnostic steps:**
+
+1. Verify that `.smart-env` is excluded from sync. The `bzm.py` exclusion list includes `.smart-env` — if you used the raw robocopy command, this directory may have been synced and corrupted.
+
+2. Check that the `.env` file at your vault root exists and contains entries for the required API keys and database path. Open it in a text editor and verify the variable names are present and not empty — do not share the values publicly or commit this file to version control.
+
+3. Confirm the Chroma process is running (if you are using a local Chroma server):
+
+   ```powershell
+   # Check if the chroma process is active
+   Get-Process | Where-Object {$_.Name -like "*chroma*"}
+   ```
+
+**How to recover:**
+
+If the `.smart-env` directory is corrupted, delete it and allow the Smart Connections plugin to rebuild the index:
+
+```powershell
+Remove-Item -Recurse -Force .smart-env
+```
+
+Then re-open Obsidian — Smart Connections will begin re-embedding your vault files. For a vault with 14,000+ entities, this process may take several minutes.
+
+<Warning>
+  Never commit `.smart-env` to git or sync it to Google Drive. It is a local binary index that is machine-specific. Always ensure it is listed in your `.gitignore` and in the `bzm.py` exclusion list.
+</Warning>
+
+</Accordion>

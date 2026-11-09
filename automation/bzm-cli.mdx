@@ -1,0 +1,208 @@
+---
+title: "bzm CLI: Baza Vault Sync and Audit Command Reference"
+sidebarTitle: "bzm CLI"
+description: "The bzm.py command-line tool is your single entry point for vault sync and health audits, with session lifecycle commands planned for a future release."
+---
+
+The Baza Command Manager (`bzm.py`) is your central tool for vault operations — syncing to Google Drive and running health audits from a single Python script. The current release exposes two active CLI subcommands (`sync` and `audit`). Session lifecycle operations (starting a session, saving checkpoints, and closing a session) are described in this reference as planned commands; they are not yet implemented in the CLI but are part of the roadmap.
+
+## Setup
+
+Before you run any `bzm` command, make sure Python is installed and your vault's `.env` file is in place. The script loads environment variables automatically from the vault root on startup.
+
+<Steps>
+
+<Step title="Install dependencies">
+Navigate to your vault root and install the required packages. The script depends on `python-dotenv` for environment variable loading.
+
+```bash
+pip install python-dotenv
+```
+</Step>
+
+<Step title="Verify your .env file">
+Confirm that a `.env` file exists at your vault root. This file holds any secrets or configuration values that `bzm.py` reads at startup via `load_dotenv()`.
+
+```bash
+# Example vault root
+<path-to-vault>/.env
+```
+</Step>
+
+<Step title="Run your first command">
+From the vault root, call `bzm.py` with any subcommand. The script resolves the vault root relative to its own location in `99-System/Scripts/`, so you can run it from anywhere.
+
+```bash
+python 99-System/Scripts/bzm.py --help
+```
+</Step>
+
+</Steps>
+
+<Note>
+The mirror destination is set by the `MIRROR_DIR` constant near the top of `bzm.py`. Update it to match the path where your Google Drive is mounted before running `sync`. See [Google Drive Sync](/automation/google-drive-sync) for setup instructions.
+</Note>
+
+---
+
+## Commands
+
+### `sync` — Synchronize vault to Google Drive
+
+The `sync` command mirrors your local vault to Google Drive using Windows `robocopy`. It runs a one-way differential copy, meaning only changed or new files are transferred and any files you deleted locally are removed from the mirror as well.
+
+```bash
+python 99-System/Scripts/bzm.py sync
+```
+
+**Expected output:**
+
+```
+🚀 Initializing Google Drive Hot Mirror Sync...
+✅ Baza Hot Mirror synchronized successfully.
+```
+
+If robocopy returns exit code 8 or higher, the script prints a warning with the exit code. Codes below 8 are informational and indicate a successful sync with minor notices (such as skipped files).
+
+<Info>
+In the planned session lifecycle workflow, `sync` fires automatically as part of checkpoint and end-of-session operations. Until those commands are implemented, run `sync` manually after bulk file operations or any time you want to push a fresh snapshot to Google Drive before a mobile working session.
+</Info>
+
+**Exclusion list applied during sync:**
+
+The following directories are always excluded from the mirror to prevent sync loops, protect plugin state, and keep the mirror lightweight:
+
+| Directory | Reason |
+|---|---|
+| `.git` | Prevents Git index corruption and lockup conflicts |
+| `.github` | Keeps CI workflow files off the mobile mirror |
+| `.venv` | Python virtual environments — large, not needed in mirror |
+| `node_modules` | Node package directories |
+| `dist` | Build output directories |
+| `.smart-env` | Environment caches |
+| `.gemini` | Gemini agent workspace files |
+| `.obsidian` | Desktop plugin state — prevents mobile/desktop config collisions |
+| `98-Cold-Archive` | Cold archive — intentionally excluded from hot mirror |
+| `.mypy_cache` | Python type-checking cache |
+| `.ruff_cache` | Python linting cache |
+| `__pycache__` | Python bytecode cache |
+
+---
+
+### `audit` — Run vault health audit
+
+The `audit` command scans your entire vault for duplicate files and broken wikilinks, then writes a structured report you can review in Obsidian.
+
+```bash
+python 99-System/Scripts/bzm.py audit
+```
+
+**Expected output:**
+
+```
+🕵️  Starting Vault Audit: <path-to-vault>
+🔗 Checking internal links...
+✅ Audit complete. Report saved to: 99-System/Logs/VAULT_AUDIT_REPORT.md
+```
+
+**What the audit does:**
+
+<Steps>
+
+<Step title="Build the file index">
+The script walks the entire vault directory tree (respecting the same exclusion list as `sync`) and builds a set of all Markdown file stems. This index is used for wikilink validation in the next step.
+</Step>
+
+<Step title="Detect duplicate files">
+Every `.md` file larger than 100 bytes gets hashed using SHA-256. Files that share an identical hash are grouped together as a duplicate set. Only files over 100 bytes are checked to avoid false positives from empty or near-empty template stubs.
+</Step>
+
+<Step title="Check broken wikilinks">
+The script scans each Markdown file for `[[wikilink]]` patterns and checks whether the linked file stem exists in the file index built in step 1.
+</Step>
+
+<Step title="Generate the report">
+Results are written to `99-System/Logs/VAULT_AUDIT_REPORT.md`. Each duplicate set is listed under its SHA-256 prefix with the relative paths of all matching files.
+</Step>
+
+</Steps>
+
+**Report format example:**
+
+```markdown
+# 🕵️ Baza Vault Audit Report - 2026-05-25
+
+## 👯 Duplicate Sets Found: 2
+
+### `a3f9b1c02d44`
+- `02-Library/note-original.md`
+- `00-Inbox/note-copy.md`
+```
+
+<Tip>
+Open `99-System/Logs/VAULT_AUDIT_REPORT.md` directly in Obsidian after the audit finishes. Each file path in the report is rendered as a clickable link, so you can navigate to duplicates instantly and decide which copy to keep.
+</Tip>
+
+---
+
+## Planned Commands
+
+The following commands are part of the Baza session lifecycle design but are **not yet implemented** in `bzm.py`'s argparse CLI. They are documented here so you understand the intended workflow. Running them today will print the help text instead of executing any action.
+
+### `start` — Begin a work session *(planned)*
+
+When implemented, `start` will initialize a new work session by pulling the latest changes from Git, checking for any session lock files that would indicate an interrupted previous session, and creating a new session log entry.
+
+```bash
+# Planned — not yet active in the CLI
+python 99-System/Scripts/bzm.py start
+```
+
+The intent is that `start` becomes the first command you run at the beginning of every work session, ensuring you're on the latest vault state before making any changes.
+
+---
+
+### `checkpoint` — Save progress mid-session *(planned)*
+
+When implemented, `checkpoint` will commit your current changes to Git and sync the vault to Google Drive in one step. Use it during long sessions to create intermediate save points without ending the session.
+
+```bash
+# Planned — not yet active in the CLI
+python 99-System/Scripts/bzm.py checkpoint
+```
+
+<CardGroup cols={2}>
+  <Card title="Git Commit" icon="code-branch">
+    Will commit all staged changes to the local Git repository with a timestamped commit message.
+  </Card>
+  <Card title="Drive Sync" icon="cloud-arrow-up">
+    Will trigger `sync` to mirror the current vault state to Google Drive so the Gemini mobile app stays current.
+  </Card>
+</CardGroup>
+
+---
+
+### `end` — Close a work session *(planned)*
+
+When implemented, `end` will run a final checkpoint — committing and syncing — and then generate a session debrief summary of the session's activity.
+
+```bash
+# Planned — not yet active in the CLI
+python 99-System/Scripts/bzm.py end
+```
+
+<Warning>
+Until `end` is implemented, make sure to run `bzm.py sync` manually and commit your changes to Git before closing Obsidian or shutting down. This keeps your Google Drive mirror and Git history current.
+</Warning>
+
+---
+
+## Command Reference Summary
+
+| Command | Status | What it does |
+|---|---|---|
+| `sync` | ✅ Active | Mirrors vault to Google Drive via robocopy |
+| `audit` | ✅ Active | Finds duplicates + broken links, writes report |
+| `start` | 🔜 Planned | Pulls Git, checks locks, opens session log |
+| `checkpoint` | 🔜 Planned | Commits Git + syncs Drive |
+| `end` | 🔜 Planned | Final checkpoint + session debrief |

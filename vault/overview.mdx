@@ -1,0 +1,99 @@
+---
+title: "Baza Vault: Understanding the Three-Layer Architecture"
+sidebarTitle: "Overview"
+description: "Learn how Baza organizes your knowledge across the Inbox, Library, and System layers to keep notes flowing from capture to curated knowledge."
+---
+
+Baza organizes your entire vault around a single, elegant idea: every piece of information has a stage in its lifecycle, and each stage has a home. Rather than forcing you to decide where something belongs the moment you capture it, Baza separates the act of capturing from the act of filing. You drop notes in one place, agents process them, and your knowledge surfaces in the right thematic collection — automatically.
+
+## The Three Layers at a Glance
+
+The vault is divided into three primary layers, each with a distinct job. Notes enter at the top, get processed by agents, and settle into curated knowledge — no manual filing required.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  00-Inbox/          ← You drop raw notes here               │
+│      │                                                      │
+│      │  Agents analyze, extract metadata, classify          │
+│      ▼                                                      │
+│  02-Library/[Topic]_K/   ← Processed, thematic knowledge   │
+│      │                                                      │
+│      │  Confidence scoring, typed relationships,            │
+│      │  semantic graph edges                                │
+│      ▼                                                      │
+│  Semantic Memory    ← Cross-referenced, queryable facts     │
+│                                                             │
+│  99-System/         ← Agent engine room (don't touch)       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Layer 1 — 00-Inbox: The Drop-Off Office
+
+The `00-Inbox/` folder sits at the very top of your file tree by design. It is your zero-friction entry point: paste a transcript, jot a meeting note, dump a brain dump — and walk away. You never need to decide which folder it belongs in, because agents do that for you.
+
+Every new note you drop here enters what Baza calls **Working Memory** — unprocessed raw input waiting to be refined.
+
+<Info>
+  You can optionally add hashtags anywhere in your note body (e.g., `#type/meeting #topic/consulting`) to give agents a head start on classification. They will parse them even if you forget.
+</Info>
+
+## Layer 2 — 02-Library: Curated Knowledge by Theme
+
+Once an agent processes a note from your Inbox, it moves the note into the appropriate thematic folder inside `02-Library/`. Each folder follows the `[Topic]_[Initial]` naming convention — the single-letter suffix is your user initial, making it easy to scale the vault for additional team members without folder name collisions.
+
+Examples of Library folders you will find in a typical Baza vault:
+
+| Folder | What it holds |
+|---|---|
+| `Consulting_K` | Client work, engagements, strategy notes |
+| `Fencing_K` | Sport-specific knowledge, training logs |
+| `Automation_K` | Workflow designs, integration research |
+| `Author_K` | Writing projects, publishing references |
+| `Personal_K` | Personal growth, reflections, journaling |
+| `Personal_Brand_and_Content_K` | Content strategy, social media, brand assets |
+
+Heavy files (PDFs, videos, images) never land in the Library directly. Instead, agents create lightweight **Resource Pointer** nodes — small `.md` files with a clickable link and full metadata — so your vault stays fast and searchable.
+
+## Layer 3 — 99-System: The Engine Room
+
+The `99-System/` folder lives at the very bottom of your file tree, out of your way. It contains everything the agent swarm needs to operate: prompts, schemas, automation scripts, protocols, and logs. You rarely need to open it; when you do, it is because you are deliberately modifying agent behavior.
+
+<Warning>
+  Do not edit raw configuration files in `99-System/` unless you know what you are changing. Modifying agent schemas incorrectly can disrupt the automated filing pipeline.
+</Warning>
+
+## How Notes Flow Through the Vault
+
+Here is the full lifecycle of a note from capture to curated knowledge:
+
+1. **You drop a raw note** into `00-Inbox/` — no metadata, no folder decision needed.
+2. **Agents detect the new file**, analyze its content, and extract structured entities (people, projects, topics) into YAML frontmatter.
+3. **The note is moved** to the correct `[Topic]_K` Library folder and linked into the knowledge graph with typed relationships.
+4. **The agent logs the action** in the weekly Baza Activity Log so you can see exactly what moved and where.
+5. **The vault syncs** to your Google Drive mirror, making your processed knowledge available on mobile via the Gemini app.
+
+## Explore Each Layer
+
+<CardGroup cols={3}>
+  <Card
+    title="Inbox"
+    icon="inbox"
+    href="/vault/inbox"
+  >
+    Learn how to use the zero-friction drop zone and what agents do with your raw notes.
+  </Card>
+  <Card
+    title="Library"
+    icon="books"
+    href="/vault/library"
+  >
+    Explore the thematic Knowledge folders where processed notes live and how to browse them.
+  </Card>
+  <Card
+    title="System Layer"
+    icon="gear"
+    href="/vault/system-layer"
+  >
+    Understand what lives in the engine room and when it is safe to open it.
+  </Card>
+</CardGroup>

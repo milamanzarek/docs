@@ -1,0 +1,126 @@
+---
+title: "Baza Inbox: Zero-Friction Note Capture and Auto-Filing"
+sidebarTitle: "Inbox"
+description: "The 00-Inbox folder is your Baza drop-off zone — dump any note, idea, or transcript here and agents will process, classify, and file it automatically."
+---
+
+The `00-Inbox/` folder is the single entry point for everything that enters your vault. Its only rule is this: put new things here, then stop. You do not choose a folder, add links, or fill in metadata. That work belongs to the agent swarm — and they are faster at it than you are.
+
+## What the Inbox Is
+
+Think of the Inbox as a **physical drop-off tray** on a very smart desk. Anything you place there gets picked up, examined, categorized, and filed without you lifting another finger. In Baza's memory model, everything in `00-Inbox/` occupies **Working Memory** — the raw, unprocessed tier of the knowledge lifecycle.
+
+The Inbox sits at the very top of your file tree so it is always the first thing you see when you open Obsidian, making capture as fast as possible.
+
+## How to Use the Inbox
+
+Drop a file into `00-Inbox/` and walk away. That is the complete workflow.
+
+You do not need to:
+- Create subfolders inside the Inbox
+- Add YAML frontmatter
+- Link to existing notes
+- Decide which Library folder it belongs in
+
+<Tip>
+  If you want to give agents a head start, add one or two hashtags anywhere in the body of your note. Agents parse them automatically during processing — but they will classify the note correctly even without them.
+</Tip>
+
+### Recommended Note Formats
+
+Any plain text file works. These formats give agents the most to work with:
+
+```markdown
+# Quick Meeting Note
+
+Met with Sarah re: Q3 consulting proposal. She wants a phased approach.
+Key dates: kickoff July 14, review August 1.
+
+#type/meeting #topic/consulting #status/active
+```
+
+```markdown
+# Research Idea
+
+Explore how agentic AI can replace manual CRM updates.
+Possible integration: Airtable → Baza → Obsidian graph.
+
+#type/idea #topic/automation #topic/ai
+```
+
+```markdown
+# Brain Dump
+
+Feeling scattered today. Three things on my mind:
+1. Fencing competition prep — need to book travel.
+2. Brand video script draft is overdue.
+3. Read the new ADK 2.0 docs.
+
+#type/idea #status/review
+```
+
+### Tagging Taxonomy (Optional but Helpful)
+
+You can use any of these hierarchical hashtags in your note body. Agents will extract them into structured metadata automatically.
+
+| Dimension | Examples |
+|---|---|
+| **Topic** | `#topic/fencing` · `#topic/consulting` · `#topic/ai` · `#topic/personal_brand` |
+| **Content Type** | `#type/meeting` · `#type/idea` · `#type/draft` · `#type/resource` · `#type/contact` |
+| **Geography** | `#geo/usa/la` · `#geo/europe/paris` · `#geo/global` |
+| **Status** | `#status/urgent` · `#status/active` · `#status/archived` · `#status/review` |
+
+## What Agents Do with Your Notes
+
+After you drop a note into the Inbox, the agent swarm takes over through a four-step pipeline:
+
+1. **Analyze** — The agent reads the full note content, identifying topics, people, projects, and action items.
+2. **Extract** — Structured entities (names, dates, relationships) are written into YAML frontmatter and typed graph links are created.
+3. **Classify** — The agent determines which Library folder best fits the note (e.g., `Consulting_K`, `Fencing_K`, `Personal_K`).
+4. **Move and Log** — The note is relocated to the correct `02-Library/[Topic]_K/` folder and the action is recorded in the active weekly Baza Activity Log.
+
+<Note>
+  You will never see notes disappear silently. Every move the agent makes is documented in the weekly Activity Log so you always know where your note ended up.
+</Note>
+
+## Tracking What Was Processed
+
+To see exactly which notes were processed, where they were filed, and what connections were made, check your **Baza Activity Logs**. These weekly files live in `99-System/Logs/` and are linked directly from your `Welcome.md` dashboard.
+
+Each log entry looks like this:
+
+```markdown
+## 2026-W21 — Processed Items
+
+- [MOVED] "Q3 Consulting Proposal Notes" → Consulting_K
+  Entities extracted: Sarah [person], Q3 Proposal [project]
+  Tags applied: #type/meeting #topic/consulting
+
+- [MOVED] "Automation Research Idea" → Automation_K
+  Entities extracted: Airtable [tool], ADK 2.0 [tool]
+  Tags applied: #type/idea #topic/automation
+```
+
+You can also trigger a **manual sync** to Google Drive at any time to make your latest filed notes available on mobile:
+
+```powershell
+python 99-System/Scripts/bzm.py sync
+```
+
+## Tips for Getting the Most from the Inbox
+
+<Tip>
+  **Capture first, organize never.** Resist the urge to create subfolders inside `00-Inbox/`. The moment you start manually sorting, you are doing the agent's job — and slowing yourself down.
+</Tip>
+
+<Tip>
+  **Transcripts and long-form text work well.** You can paste full meeting transcripts, voice note transcriptions, or document exports directly into the Inbox. Agents are built to handle long, messy text.
+</Tip>
+
+<Info>
+  Heavy files like PDFs, videos, and images should not be stored in the vault at all. Agents will route them to external storage and create a lightweight **Resource Pointer** note in the Library. Drop a note in the Inbox describing the file instead, and the agent will handle the rest.
+</Info>
+
+<Warning>
+  Do not edit YAML frontmatter that agents have already written into a note. If you see structured metadata at the top of a file, the agent swarm placed it there intentionally. Editing it manually can break graph relationships.
+</Warning>

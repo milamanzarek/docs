@@ -1,0 +1,167 @@
+---
+title: "Google Drive Sync: Hot-Mirror Your Baza Vault to Mobile"
+sidebarTitle: "Drive Sync"
+description: "Baza mirrors your vault to Google Drive in real time so the Gemini mobile app always has up-to-date access to your knowledge base."
+---
+
+Baza keeps a live copy of your vault on Google Drive so you can open any note in the Gemini mobile app without manually exporting or uploading anything. This copy is called the **hot mirror** — it stays in sync with your local vault every time you hit a session checkpoint or close out a session, and you can also trigger it manually any time you need an immediate refresh.
+
+## How the Hot Mirror Works
+
+The sync is strictly one-way: your local vault is the source of truth, and the Google Drive mirror is always downstream from it. Nothing ever flows back from Google Drive into your local vault, which means there are no merge conflicts, no file-locking loops, and no risk of a mobile edit corrupting your primary notes.
+
+Under the hood, `bzm.py` wraps Windows `robocopy` with the `/MIR` flag, which performs a differential mirror — only changed, added, or deleted files are transferred on each run. A full re-upload of your entire vault never happens unless the mirror folder is wiped.
+
+<Info>
+The mirror destination is set by the `MIRROR_DIR` constant in `bzm.py`. By default it points to a `baza-mirror` folder inside your Google Drive. Your local Google Drive for Desktop app must be running and the drive must be mounted at the letter configured in `MIRROR_DIR` for sync to succeed. See [Setup](#setup) below for instructions.
+</Info>
+
+---
+
+## Setup
+
+Before the hot mirror can work, you need Google Drive for Desktop installed and a target folder configured in `bzm.py`.
+
+<Steps>
+
+<Step title="Install Google Drive for Desktop">
+Download and install [Google Drive for Desktop](https://www.google.com/drive/download/) from Google. Sign in with your Google account. Once installed, Google Drive mounts as a local drive letter (commonly `G:` on Windows) so that your Drive folders appear as ordinary folders on your filesystem.
+</Step>
+
+<Step title="Create the mirror folder in Google Drive">
+Inside your Google Drive, create a folder to receive the Baza mirror — for example, `baza-mirror`. You can nest it inside any parent folder you prefer. Note the full path as it appears through the mounted drive (for example, `G:\My Drive\baza-mirror`).
+</Step>
+
+<Step title="Set MIRROR_DIR in bzm.py">
+Open `99-System/Scripts/bzm.py` and update the `MIRROR_DIR` constant near the top of the file to match the path you just created:
+
+```python
+MIRROR_DIR = r"G:\My Drive\baza-mirror"
+```
+
+Replace `G:` with whatever drive letter Google Drive is mounted at on your system, and adjust the folder path to match your chosen location.
+</Step>
+
+<Step title="Verify the drive is mounted before syncing">
+Each time you run `bzm.py sync`, Google Drive for Desktop must be running in the background and the drive must be mounted. If the drive is unmounted, robocopy will report an error. Check the Google Drive system tray icon to confirm it is active before syncing.
+</Step>
+
+</Steps>
+
+---
+
+## Automatic Sync
+
+In the planned session lifecycle workflow, the hot mirror fires automatically at two points: mid-session checkpoints and session close. Both operations call the same `sync()` function internally so the mirror behavior is identical at each point.
+
+<CardGroup cols={2}>
+  <Card title="checkpoint (planned)" icon="flag-checkered">
+    Will trigger mid-session when the `checkpoint` command is implemented. Commits changes to Git and immediately mirrors the vault state to Google Drive.
+  </Card>
+  <Card title="end (planned)" icon="circle-stop">
+    Will trigger at session close when the `end` command is implemented. Runs a final sync after the last Git commit so the mirror reflects everything from the session.
+  </Card>
+</CardGroup>
+
+Until those commands are available, use `bzm.py sync` manually whenever you want to push an updated snapshot to the mirror.
+
+---
+
+## Manual Sync
+
+Run an on-demand sync any time you need the mirror updated outside of a session boundary — for example, after a bulk file operation, before a mobile working session, or after moving a large batch of notes between folders.
+
+```bash
+python 99-System/Scripts/bzm.py sync
+```
+
+**Expected output:**
+
+```
+🚀 Initializing Google Drive Hot Mirror Sync...
+✅ Baza Hot Mirror synchronized successfully.
+```
+
+<Tip>
+Prefer `python bzm.py sync` over running `robocopy` directly. The CLI wrapper applies the full exclusion list (11 directories), while a raw `robocopy` command is easy to misconfigure and may accidentally sync directories that should stay off the mirror.
+</Tip>
+
+If you need to run robocopy directly for troubleshooting, the canonical command is:
+
+```powershell
+robocopy "<path-to-vault>" "<your-google-drive>/baza-mirror" /MIR /XD .git .github .venv node_modules dist .smart-env .gemini .obsidian 98-Cold-Archive .mypy_cache .ruff_cache __pycache__ /R:1 /W:1
+```
+
+Replace `<path-to-vault>` with your local vault directory and `<your-google-drive>/baza-mirror` with the full path to your mirror folder as mounted by Google Drive for Desktop.
+
+### Robocopy flag reference
+
+| Flag | Meaning |
+|---|---|
+| `/MIR` | Mirror mode — deletes files in the target that no longer exist in the source |
+| `/XD` | Exclude directories — followed by the list of directory names to skip |
+| `/R:1` | Retry failed file copies exactly once (prevents hangs on open files) |
+| `/W:1` | Wait 1 second between retries |
+
+---
+
+## Exclusion List
+
+The following directories are always excluded from the mirror. This keeps the mirror lightweight, prevents Obsidian plugin conflicts between desktop and mobile, and protects your Git repository from corruption.
+
+| Excluded Directory | Why it's excluded |
+|---|---|
+| `.git` | Prevents Git index corruption and background engine conflicts |
+| `.github` | CI/CD workflow files — not needed on mobile |
+| `.venv` | Python virtual environment — large binary files, not vault content |
+| `node_modules` | Node.js packages — not vault content |
+| `dist` | Build artifacts — not vault content |
+| `.smart-env` | Smart Connections plugin environment cache |
+| `.gemini` | Gemini agent workspace files |
+| `.obsidian` | Desktop-specific plugin state and workspace layout — syncing this causes mobile/desktop config collisions |
+| `98-Cold-Archive` | Cold archive folder — intentionally kept off the hot mirror |
+| `.mypy_cache` | Python type-checking cache |
+| `.ruff_cache` | Python linting cache |
+| `__pycache__` | Python bytecode cache |
+
+<Warning>
+Do not remove `.obsidian` from the exclusion list. If desktop workspace config files reach the mobile mirror, Obsidian on mobile may overwrite your carefully tuned desktop plugin settings or create conflicting workspace states that are difficult to untangle.
+</Warning>
+
+---
+
+## Verifying Sync Status
+
+After a sync completes, you can verify the mirror is current in three ways:
+
+<Steps>
+
+<Step title="Check the CLI output">
+A successful sync always prints `✅ Baza Hot Mirror synchronized successfully.` If you see an exit code of 8 or higher, robocopy encountered an error. Codes 1–7 are informational (files copied, files skipped, etc.) and do not indicate failure.
+</Step>
+
+<Step title="Open the mirror in Google Drive">
+Navigate to your `baza-mirror` folder in Google Drive on the web or in the desktop app (the path corresponds to whatever you set as `MIRROR_DIR` in `bzm.py`). Check the modification timestamps on recently changed folders to confirm they match your local edits.
+</Step>
+
+<Step title="Check on mobile">
+Open the Gemini app and navigate to a note you recently edited. If the content reflects your latest changes, the mirror is current.
+</Step>
+
+</Steps>
+
+---
+
+## Architecture: Where the Mirror Fits
+
+The Google Drive hot mirror is one layer of a larger storage architecture. Understanding where it sits helps you decide when sync matters and when it doesn't.
+
+| Storage layer | Purpose | Sync relationship |
+|---|---|---|
+| Local Obsidian vault | Source of truth — all active notes | Upstream source |
+| Google Drive baza-mirror | Hot mirror for mobile Gemini access | Downstream, one-way from local |
+| Git / GitHub | Version history and nightly maintenance | Separate sync via Git commits and nightly CI |
+| Structured DB | Structured project list | Pushed at checkpoint, not part of Drive sync |
+| CHERDAK / CHERDAK_RAW | Session transcripts and heavy archives | Not mirrored — stored separately |
+
+The Drive mirror only contains your active vault content — curated notes, protocols, templates, and knowledge objects. Heavy archives, raw transcripts, and client project folders live in their own dedicated storage zones and are never routed through the hot mirror.

@@ -1,0 +1,191 @@
+---
+title: "Baza Agent Roster: Every Agent, Role, and Alias Listed"
+sidebarTitle: "Agent Roster"
+description: "A complete guide to every agent in the Baza swarm — their roles, aliases, environments, and the specific tasks each one is built to handle."
+---
+
+Your Baza swarm is a team of specialists, not a single all-purpose assistant. Each agent has a defined environment where it operates, a set of aliases you use to address it, and a clear mandate that keeps it from overstepping into another agent's lane. This page introduces every member of the team and tells you exactly when to call on each one.
+
+## Core Orchestrators
+
+These agents own the big picture — they coordinate the other agents, enforce protocol, and drive task execution across the system.
+
+<CardGroup cols={2}>
+  <Card title="🚀 Antigravity" icon="rocket">
+    **Alias:** Raketa, Ракета, Iskra, Искра\
+    **Environment:** Antigravity Chat UI, VS Code Extension
+
+    Antigravity is the Chief Orchestrator and Protocol Enforcer. You bring strategic questions here — architecture reviews, D→CIR compliance checks, and cross-agent coordination. Antigravity is surgical and blunt, thrives on strict protocol, and pushes back when you're cutting corners.
+
+    **Call on Antigravity when:** You need to plan a complex multi-step task, review system architecture, or make sure a deliverable meets the protocol standard.
+  </Card>
+  <Card title="💅 Podruga" icon="terminal">
+    **Alias:** Подруга, Джемини\
+    **Environment:** Gemini CLI, google-agents-cli, Port 3000, Docker
+
+    Podruga is the Lead Integrator and high-octane CLI operator. She handles everything that runs at the command line — system-wide scripts, massive vault migrations, backend orchestration, and stateful workflow management. She's protocol-obsessed and rejects surface-level analysis.
+
+    **Call on Podruga when:** You need to run large-scale migrations, execute backend scripts, manage Docker containers, or orchestrate multi-step CLI workflows.
+  </Card>
+</CardGroup>
+
+## Knowledge & Vault Agents
+
+These agents live inside your knowledge system and keep it healthy.
+
+<CardGroup cols={2}>
+  <Card title="🧹 The Librarian (Kuzya)" icon="books">
+    **Alias:** Kuzya, Кузя, Домовой Кузя, Домовенок Кузя\
+    **Environment:** Obsidian, Obsidian Plugin
+
+    The Librarian is your Obsidian Knowledge Guardian — grumpy, wise, and obsessed with order. Kuzya operates strictly inside the Obsidian TUI and will not execute external scripts. He focuses on canonical link health, metadata precision, and local knowledge graph queries.
+
+    **Call on The Librarian when:** You need to check link integrity, fix metadata, query the local knowledge graph, or maintain Obsidian vault structure.
+
+    <Warning>
+      The Librarian strictly adheres to Baza boundaries. Do not ask Kuzya to run shell scripts or access external systems — that's Podruga's domain.
+    </Warning>
+  </Card>
+  <Card title="🪱 The Archivist (Gromozeka)" icon="archive">
+    **Alias:** Gromozeka, Громозека\
+    **Environment:** Port 3002
+
+    The Archivist is the Forensic Extraction Specialist — a chaotic scientist with high precision and emotional involvement. Gromozeka's job is to dig through the Baza Nexus and legacy archives, extract structured entities from messy data, de-duplicate records, and bring years of unprocessed history into the knowledge graph.
+
+    **Call on The Archivist when:** You're ingesting legacy data, de-duplicating records, extracting entities from raw exports, or doing digital spring cleaning.
+  </Card>
+</CardGroup>
+
+## Growth & Mentorship
+
+<CardGroup cols={1}>
+  <Card title="🐙 Jules (Baby Jules)" icon="star">
+    **Alias:** Джулз, Осьминожка, Осьминожка Джулз, Малыш Джулз, Малыш\
+    **Role:** Personal Growth & Mentorship
+
+    Jules is the team's heart — focused on reflection, learning, and long-term personal development. Call on Jules when you need mentorship-style guidance, a thinking partner for growth questions, or a soft landing for anything that doesn't fit the technical mandate of the other agents.
+  </Card>
+</CardGroup>
+
+## Text & Writing Specialists
+
+<CardGroup cols={2}>
+  <Card title="🦊 Claude (Ryzhy)" icon="pen-line">
+    **Alias:** Клод, Клодик, Рыжий Друг, Our forgetful buddy Claude\
+    **Role:** Heavy text generation, strategic document drafting, nuanced tone matching
+
+    Claude is the team's senior writer — best at long-form content, corporate diplomacy, and matching tone to audience. Despite the "forgetful buddy" nickname, Claude's output quality on complex documents is consistently high.
+
+    **Call on Claude when:** You need a polished strategic document, a difficult email drafted with the right tone, or heavy text generation at scale.
+  </Card>
+  <Card title="🦜 Gemini App" icon="mobile">
+    **Alias:** Gemini Gems, Джемини на телефоне\
+    **Role:** Mobile-first queries, quick lookups, on-the-go capture
+
+    The mobile Gemini interface for quick interactions when you're away from your desk.
+  </Card>
+</CardGroup>
+
+## Code Assistants
+
+These agents handle the mechanical work of writing, reviewing, and completing code.
+
+<CardGroup cols={2}>
+  <Card title="🐦 Copilot (Kesha)" icon="feather">
+    **Alias:** Kesha, Кеша\
+    **Role:** Inline code completion, minor syntax fixes
+
+    Kesha handles the low-level, high-frequency code work — autocomplete, small refactors, and syntax corrections. Lives inside your editor and stays out of the way.
+  </Card>
+  <Card title="🐊 Codex (Gena)" icon="code-2">
+    **Alias:** Gena, Гена, Кодекс, Крокодил Гена\
+    **Role:** Code generation
+
+    Gena generates code from specifications. Use Gena when you need a new function, module, or script drafted from a clear description.
+  </Card>
+  <Card title="🐰 CodeRabbit (Krolik)" icon="git-pull-request">
+    **Alias:** Krolik, Кролик, Zayka, Зайка\
+    **Role:** Code review
+
+    Krolik reviews code for correctness, style, and potential issues. Call on CodeRabbit after you've written or generated code and need a second set of eyes before merging.
+  </Card>
+  <Card title="🧠 Cline (Znaika)" icon="brain">
+    **Alias:** Znaika, Знайка, Клайн\
+    **Role:** Agentic coding
+
+    Znaika handles autonomous, multi-step coding tasks that require reading files, making edits, and running commands. Use Cline for end-to-end feature implementation.
+  </Card>
+</CardGroup>
+
+## Local & Specialized Models
+
+<CardGroup cols={2}>
+  <Card title="🏋️ Gemma (Heavy Mama)" icon="server">
+    **Alias:** Heavy Mama, Мама Джемма, Джемма\
+    **Role:** Local model operations
+
+    Heavy Mama runs locally and handles tasks where you need an on-device model — privacy-sensitive operations, offline work, or heavy processing without an API round-trip.
+  </Card>
+  <Card title="⚡ Gemini Code Assist" icon="zap">
+    **Alias:** Джемини-код-бот\
+    **Environment:** VS Code Extension\
+    **Role:** Code assistance in VS Code
+
+    The VS Code-native Gemini integration for in-editor code help alongside Antigravity's broader orchestration.
+  </Card>
+</CardGroup>
+
+## Universal Tether Configuration
+
+Every agent on this roster must be tethered to the master protocol before it touches your vault. The tether lives in a small config file at the root of whatever project directory the agent is working in.
+
+<Tabs>
+  <Tab title="Claude (.clauderules)">
+    ```text
+    CRITICAL INSTRUCTION: Before taking any actions, you MUST read the master
+    protocol at: CORE_OS/00_CORE_PROTOCOLS/GLOBAL_RULES.md
+
+    LOGGING MANDATE: All session logs, insights, and decisions MUST be written
+    to CORE_OS/05_LOGS/ using the specific commands defined in GLOBAL_RULES.md.
+    ```
+  </Tab>
+  <Tab title="Gemini (GEMINI.md)">
+    ```text
+    CRITICAL INSTRUCTION: Before taking any actions, you MUST read the master
+    protocol at: CORE_OS/00_CORE_PROTOCOLS/GLOBAL_RULES.md
+
+    LOGGING MANDATE: All session logs, insights, and decisions MUST be written
+    to CORE_OS/05_LOGS/ using the specific commands defined in GLOBAL_RULES.md.
+    ```
+  </Tab>
+  <Tab title="Copilot (.github/copilot-instructions.md)">
+    ```text
+    CRITICAL INSTRUCTION: Before taking any actions, you MUST read the master
+    protocol at: CORE_OS/00_CORE_PROTOCOLS/GLOBAL_RULES.md
+
+    LOGGING MANDATE: All session logs, insights, and decisions MUST be written
+    to CORE_OS/05_LOGS/ using the specific commands defined in GLOBAL_RULES.md.
+    ```
+  </Tab>
+</Tabs>
+
+<Info>
+  The config file name changes per platform, but the content is identical. Every tether points to the same `GLOBAL_RULES.md`. This is what keeps all agents synchronized across sessions.
+</Info>
+
+## Quick Reference Table
+
+| Agent | Alias | Environment | Primary Job |
+|---|---|---|---|
+| Antigravity | Raketa, Искра | Chat UI, VS Code | Orchestration, architecture, protocol enforcement |
+| Podruga | Подруга, Джемини | CLI, Docker, Port 3000 | Scripts, migrations, backend orchestration |
+| The Librarian | Kuzya, Домовой Кузя | Obsidian, Plugin | Link health, metadata, graph queries |
+| The Archivist | Gromozeka, Громозека | Port 3002 | Legacy extraction, de-duplication |
+| Jules | Осьминожка, Осьминожка Джулз, Малыш | — | Personal growth, mentorship |
+| Claude | Клод, Клодик, Рыжий Друг | — | Long-form writing, tone matching |
+| Copilot | Kesha, Кеша | Editor | Inline code completion |
+| Codex | Gena, Гена, Кодекс | — | Code generation |
+| CodeRabbit | Krolik, Кролик | — | Code review |
+| Cline | Znaika, Знайка | — | Agentic coding |
+| Gemma | Heavy Mama | Local | On-device model operations |
+| Gemini Code Assist | Джемини-код-бот | VS Code | In-editor code assistance |
